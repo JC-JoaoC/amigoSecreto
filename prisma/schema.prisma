@@ -1,0 +1,179 @@
+// Schema do Laço — plataforma de Amigo Secreto.
+// Convenção: modelos em PascalCase no código, tabelas/colunas em snake_case no banco.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ORGANIZER
+}
+
+enum MessageDirection {
+  TO_RECEIVER // de quem presenteia para quem foi sorteado
+  TO_GIVER // resposta de quem foi sorteado para o seu amigo secreto
+}
+
+enum DrawStatus {
+  OPEN // aceitando participantes
+  COMPLETED // sorteio realizado — imutável
+}
+
+model User {
+  id              String    @id @default(cuid())
+  name            String    @db.VarChar(80)
+  /// Nome em minúsculas e sem acentos, usado na busca ("joao" encontra "João").
+  searchName      String    @map("search_name") @db.VarChar(80)
+  /// Sempre normalizado (trim + minúsculas) antes de gravar.
+  email           String    @unique @db.VarChar(254)
+  role            Role      @default(USER)
+  /// Preenchido no primeiro login confirmado. Contas não verificadas não aparecem na lista pública.
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  gifts          Gift[]
+  sessions       Session[]
+  loginCodes     LoginCode[]
+  participations DrawParticipant[]
+  createdDraws   Draw[]            @relation("DrawCreator")
+
+  @@index([emailVerifiedAt, searchName])
+  @@map("users")
+}
+
+model Gift {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  title       String   @db.VarChar(120)
+  url         String   @db.VarChar(2048)
+  description String?  @db.VarChar(500)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("gifts")
+}
+
+model Session {
+  /// SHA-256 do token do cookie. O token em si nunca é gravado.
+  id         String   @id @db.VarChar(64)
+  userId     String   @map("user_id")
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model LoginCode {
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  /// HMAC-SHA256(APP_SECRET, código). O código em texto nunca é gravado.
+  codeHash   String    @map("code_hash") @db.VarChar(64)
+  attempts   Int       @default(0)
+  expiresAt  DateTime  @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("login_codes")
+}
+
+/// Contadores de janela fixa para rate limiting (funciona com várias instâncias/serverless).
+model RateLimit {
+  key         String   @id @db.VarChar(128)
+  count       Int
+  windowStart DateTime @map("window_start")
+
+  @@map("rate_limits")
+}
+
+model Draw {
+  id          String     @id @default(cuid())
+  name        String     @db.VarChar(80)
+  description String?    @db.VarChar(500)
+  /// Texto livre, ex.: "R$ 100".
+  budget      String?    @db.VarChar(40)
+  eventDate   DateTime?  @map("event_date") @db.Date
+  status      DrawStatus @default(OPEN)
+  createdById String?    @map("created_by_id")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  completedAt DateTime?  @map("completed_at")
+
+  createdBy    User?             @relation("DrawCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  participants DrawParticipant[]
+  results      DrawResult[]
+
+  @@index([status, createdAt])
+  @@map("draws")
+}
+
+model DrawParticipant {
+  id        String   @id @default(cuid())
+  drawId    String   @map("draw_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  draw   Draw        @relation(fields: [drawId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  result DrawResult?
+
+  @@unique([drawId, userId])
+  @@index([userId])
+  @@map("draw_participants")
+}
+
+/// Um registro por participante (quem presenteia). O destinatário fica cifrado.
+model DrawResult {
+  id             String    @id @default(cuid())
+  drawId         String    @map("draw_id")
+  /// Quem presenteia (DrawParticipant).
+  participantId  String    @unique @map("participant_id")
+  /// AES-256-GCM(id do usuário sorteado). Só o servidor, com APP_SECRET, consegue ler.
+  receiverCipher String    @map("receiver_cipher") @db.VarChar(255)
+  /// HMAC(drawId:receiverId) — garante no banco que ninguém é sorteado duas vezes, sem revelar quem.
+  receiverHash   String    @map("receiver_hash") @db.VarChar(64)
+  revealedAt     DateTime? @map("revealed_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  draw        Draw            @relation(fields: [drawId], references: [id], onDelete: Cascade)
+  /// NoAction: impede apagar participante (ou usuário) de um sorteio já realizado.
+  participant DrawParticipant @relation(fields: [participantId], references: [id], onDelete: NoAction)
+  messages    DrawMessage[]
+
+  @@unique([drawId, receiverHash])
+  @@index([drawId])
+  @@map("draw_results")
+}
+
+/// Conversa anônima de um par do sorteio. A conversa pertence ao resultado de quem presenteia;
+/// o autor é deduzido pela direção — nenhum id de usuário é gravado na mensagem.
+model DrawMessage {
+  id         String           @id @default(cuid())
+  resultId   String           @map("result_id")
+  direction  MessageDirection
+  /// AES-256-GCM do texto, amarrado à conversa.
+  bodyCipher String           @map("body_cipher") @db.Text
+  readAt     DateTime?        @map("read_at")
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  result DrawResult @relation(fields: [resultId], references: [id], onDelete: Cascade)
+
+  @@index([resultId, createdAt])
+  @@map("draw_messages")
+}

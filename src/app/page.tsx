@@ -1,69 +1,128 @@
-import Image from "next/image";
+import { Suspense } from "react";
+import { ParticipantDirectory } from "@/components/participants/participant-directory";
+import { Pagination } from "@/components/participants/pagination";
+import { ParticipantSearch } from "@/components/participants/participant-search";
+import { SlipPile, SlipRow } from "@/components/slips";
+import { ButtonLink } from "@/components/ui/button";
+import { Container, EmptyState } from "@/components/ui/misc";
+import { UrlToast } from "@/components/url-toast";
+import { formatDayShort } from "@/lib/format";
+import { getCurrentUser } from "@/server/auth/current-user";
+import { getHomeStats, listParticipants, sampleFirstNames } from "@/server/services/users";
 
-export default function Home() {
+type HomeProps = { searchParams: Promise<{ q?: string; pagina?: string }> };
+
+export default async function HomePage({ searchParams }: HomeProps) {
+  const sp = await searchParams;
+  const q = typeof sp.q === "string" ? sp.q.slice(0, 80) : "";
+  const page = Number.parseInt(typeof sp.pagina === "string" ? sp.pagina : "1", 10) || 1;
+
+  const [user, participants, stats, names] = await Promise.all([
+    getCurrentUser(),
+    listParticipants({ q, page }),
+    getHomeStats(),
+    sampleFirstNames(7),
+  ]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+    <>
+      <Suspense>
+        <UrlToast param="saiu" message="Você saiu da sua conta." />
+      </Suspense>
+
+      <section className="border-b border-line">
+        <Container className="grid gap-10 py-12 sm:py-16 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:py-20">
+          <div>
+            <h1 className="max-w-[18ch] animate-rise text-[34px] font-bold leading-[1.05] text-ink sm:text-[56px]">
+              Seu Amigo Secreto começa aqui!
+            </h1>
+            <p className="mt-5 max-w-[34rem] animate-rise text-lg leading-7 text-ink [animation-delay:70ms]">
+              Conheça seus amigos, descubra o que eles gostariam de ganhar e participe do sorteio.
+            </p>
+            <div className="mt-8 flex animate-rise flex-col gap-3 [animation-delay:140ms] sm:flex-row">
+              {user ? (
+                <>
+                  <ButtonLink href="/meus-presentes" size="lg" variant="accent">
+                    Montar minha lista
+                  </ButtonLink>
+                  <ButtonLink href="/meu-resultado" size="lg" variant="outline">
+                    Ver quem eu tirei
+                  </ButtonLink>
+                </>
+              ) : (
+                <>
+                  <ButtonLink href="/cadastro" size="lg" variant="accent">
+                    Criar minha conta
+                  </ButtonLink>
+                  <ButtonLink href="/entrar" size="lg" variant="outline">
+                    Já tenho conta
+                  </ButtonLink>
+                </>
+              )}
+            </div>
+
+            <dl className="mt-10 grid max-w-lg animate-rise grid-cols-3 divide-x divide-line border-y border-line [animation-delay:210ms]">
+              <div className="py-3 pr-4">
+                <dt className="text-[13px] text-ink-3">Participantes</dt>
+                <dd className="tabular mt-0.5 text-2xl font-medium text-ink">{stats.participants}</dd>
+              </div>
+              <div className="px-4 py-3">
+                <dt className="text-[13px] text-ink-3">Listas prontas</dt>
+                <dd className="tabular mt-0.5 text-2xl font-medium text-ink">{stats.listsWithGifts}</dd>
+              </div>
+              <div className="py-3 pl-4">
+                <dt className="text-[13px] text-ink-3">Próxima troca</dt>
+                <dd className="mt-0.5 truncate text-2xl font-medium text-ink">
+                  {stats.nextDraw?.eventDate ? formatDayShort(stats.nextDraw.eventDate) : <span className="text-ink-3">—</span>}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="lg:hidden">
+            <SlipRow names={names} />
+          </div>
+          <SlipPile names={names} className="hidden h-80 lg:block" />
+        </Container>
+      </section>
+
+      <section id="participantes" aria-labelledby="titulo-participantes" className="scroll-mt-20">
+        <Container className="py-12 sm:py-16">
+          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 id="titulo-participantes" className="text-[28px] font-bold text-ink">
+                Participantes
+              </h2>
+              <p className="mt-1 text-base text-ink-2">
+                {participants.query
+                  ? `${participants.total} ${participants.total === 1 ? "resultado" : "resultados"} para “${participants.query}”`
+                  : "Toque em um nome para ver a lista de desejos."}
+              </p>
+            </div>
+            <Suspense>
+              <ParticipantSearch initialQuery={q} />
+            </Suspense>
+          </div>
+
+          {participants.items.length > 0 ? (
+            <>
+              <ParticipantDirectory people={participants.items} meId={user?.id} />
+              <Pagination page={participants.page} pageCount={participants.pageCount} q={participants.query} />
+            </>
+          ) : participants.query ? (
+            <EmptyState
+              title="Ninguém com esse nome"
+              description="Confira a grafia ou busque só pelo primeiro nome. Acentos não fazem diferença."
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+          ) : (
+            <EmptyState
+              title="Ainda não há participantes"
+              description="Crie sua conta, monte a lista de desejos e chame a turma."
+              action={!user && <ButtonLink href="/cadastro">Criar minha conta</ButtonLink>}
+            />
+          )}
+        </Container>
+      </section>
+    </>
   );
 }

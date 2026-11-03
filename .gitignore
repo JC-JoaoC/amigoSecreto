@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+!.env.example
+
+# prisma client gerado
+/src/generated/
+
+# caixa de saída de e-mails em dev/teste
+/.mail-outbox/
+
+# playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/

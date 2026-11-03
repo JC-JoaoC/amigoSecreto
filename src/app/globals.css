@@ -1,26 +1,127 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ───────────── Sistema visual do Laço ─────────────
+   Superfícies brancas e cinza-claro, tinta verde quase preta,
+   um único acento (vermelho) para a ação principal, dourado só em detalhe.
+   Sem gradientes, sem sombra em repouso: borda de 1px OU troca de tom. */
+@theme {
+  --font-sans: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  --font-hand: var(--font-caveat), "Segoe Print", cursive;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-ink: #14211a;
+  --color-ink-2: #4f5b54;
+  --color-ink-3: #66706a;
+  --color-line: #e1e4e0;
+  --color-line-strong: #c7cec8;
+  --color-mist: #f3f5f2;
+  --color-mist-2: #e8ebe7;
+  --color-paper: #fffdf7;
+  --color-paper-edge: #e6dfcd;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  --color-pine-900: #0f2a1f;
+  --color-pine-800: #173b2c;
+  --color-pine-700: #1f5039;
+  --color-pine-600: #276547;
+  --color-pine-100: #dcefe3;
+  --color-pine-50: #eef6f0;
+
+  --color-berry-700: #9a1d29;
+  --color-berry-600: #b8232f;
+  --color-berry-100: #f9dfe0;
+  --color-berry-50: #fcf0f0;
+
+  --color-gold-500: #c9a227;
+  --color-gold-300: #e8d38a;
+
+  --radius-control: 6px;
+  --radius-panel: 8px;
+
+  --shadow-float: 0 1px 2px rgb(20 33 26 / 0.06), 0 12px 32px rgb(20 33 26 / 0.14);
+
+  --animate-rise: rise 0.42s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-drop: drop 0.6s cubic-bezier(0.2, 0.9, 0.25, 1.15) both;
+  --animate-unfold: unfold 0.55s cubic-bezier(0.25, 0.9, 0.3, 1) both;
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes drop {
+    from { opacity: 0; transform: translateY(-28px) rotate(var(--tilt, 0deg)); }
+    to { opacity: 1; transform: translateY(0) rotate(var(--tilt, 0deg)); }
+  }
+  @keyframes unfold {
+    from { opacity: 0; transform: perspective(600px) rotateX(-75deg); }
+    to { opacity: 1; transform: perspective(600px) rotateX(0deg); }
   }
 }
 
+:root {
+  color-scheme: light;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+@media (pointer: fine) {
+  html { overscroll-behavior: none; }
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #ffffff;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3 {
+  text-wrap: balance;
+  letter-spacing: -0.015em;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* Foco sempre visível (teclado), nunca no clique. */
+:focus-visible {
+  outline: 2px solid var(--color-gold-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: var(--color-gold-300);
+  color: var(--color-ink);
+}
+
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* Carregamento: blocos planos no tamanho real, sem shimmer. */
+.skeleton { background: var(--color-mist-2); }
+
+dialog { overscroll-behavior: contain; }
+dialog::backdrop { background: rgb(15 42 31 / 0.45); }
+
+/* Papelzinho do sorteio — o elemento de assinatura da interface. */
+.slip {
+  background: var(--color-paper);
+  border: 1px solid var(--color-paper-edge);
+  border-bottom-width: 3px;
+  border-radius: 3px;
+  background-image: linear-gradient(to bottom, transparent calc(50% - 0.5px), rgb(120 100 60 / 0.16) 50%, transparent calc(50% + 0.5px));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
