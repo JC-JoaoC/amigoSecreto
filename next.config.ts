@@ -30,6 +30,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Gera .next/standalone (servidor mínimo) para a imagem Docker do Coolify.
+  output: "standalone",
   poweredByHeader: false,
   turbopack: {
     rules: {

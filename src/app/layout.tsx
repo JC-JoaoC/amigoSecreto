@@ -25,6 +25,8 @@ export const metadata: Metadata = {
   title: { default: `${BRAND.name} · Amigo secreto`, template: `%s · ${BRAND.name}` },
   description: BRAND.description,
   applicationName: BRAND.name,
+  // Plataforma privada: nomes e listas de pessoas fora dos buscadores.
+  robots: { index: false, follow: false },
 };
 
 export const viewport: Viewport = {

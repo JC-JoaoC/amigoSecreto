@@ -51,3 +51,6 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# credenciais locais do Coolify (nunca versionar)
+.coolify.env

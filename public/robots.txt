@@ -1,0 +1,3 @@
+# Plataforma privada de amigo secreto: nomes e listas de pessoas não devem ser indexados.
+User-agent: *
+Disallow: /
