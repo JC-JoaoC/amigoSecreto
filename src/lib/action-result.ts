@@ -1,7 +1,7 @@
 /** Formato padrão de retorno das Server Actions (serializável para o cliente). */
 export type ActionResult<T = undefined> =
   | { ok: true; data: T; message?: string }
-  | { ok: false; error: string; fieldErrors?: Record<string, string[]> };
+  | { ok: false; error: string; code?: string; fieldErrors?: Record<string, string[]> };
 
 /** Aceita apenas caminhos internos. Evita "open redirect" via ?next=https://site-malicioso. */
 export function safeNextPath(next: string | null | undefined, fallback = "/"): string {

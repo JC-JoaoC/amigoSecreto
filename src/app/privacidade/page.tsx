@@ -7,19 +7,19 @@ export const metadata: Metadata = { title: "Privacidade e dados" };
 const sections = [
   {
     title: "Quais dados coletamos",
-    body: "Nome e e-mail no cadastro, os presentes que você mesmo adiciona, sua participação nos sorteios e as mensagens anônimas que você enviar. Não pedimos telefone, CPF, endereço nem senha.",
+    body: "Nome, e-mail e senha no cadastro, a foto de perfil (opcional), os presentes que você mesmo adiciona, sua participação nos sorteios e as mensagens anônimas que você enviar. Não pedimos telefone, CPF nem endereço.",
   },
   {
     title: "Para que usamos",
-    body: "Para você entrar (enviamos um código ao seu e-mail), mostrar sua lista de desejos aos participantes, realizar os sorteios, entregar as mensagens ao seu par e avisar quando um sorteio acontecer. Não vendemos nem repassamos seus dados.",
+    body: "Para você entrar na sua conta, recuperar a senha e confirmar o e-mail (por links enviados ao seu e-mail), mostrar sua lista de desejos aos participantes, realizar os sorteios, entregar as mensagens ao seu par e avisar quando um sorteio acontecer. Não vendemos nem repassamos seus dados.",
   },
   {
     title: "O que fica visível",
-    body: "Seu nome e sua lista de presentes aparecem para quem usa a plataforma, porque esse é o objetivo do amigo secreto. Seu e-mail não aparece para ninguém.",
+    body: "Seu nome, sua foto (se você colocar) e sua lista de presentes aparecem para quem usa a plataforma, porque esse é o objetivo do amigo secreto. Seu e-mail não aparece para ninguém.",
   },
   {
     title: "Como protegemos",
-    body: "Códigos de acesso e tokens de sessão são guardados só como hash. O resultado de cada sorteio e o texto das mensagens anônimas são cifrados (AES-256-GCM): só a própria pessoa vê quem tirou, e as mensagens não registram quem as escreveu. Nem quem organiza vê os pares.",
+    body: "Sua senha é guardada só como hash (scrypt), nunca em texto. Tokens de sessão e links enviados por e-mail também ficam só como hash. O resultado de cada sorteio e o texto das mensagens anônimas são cifrados (AES-256-GCM): só a própria pessoa vê quem tirou, e as mensagens não registram quem as escreveu. Nem quem organiza vê os pares.",
   },
   {
     title: "Cookies",
@@ -31,7 +31,7 @@ const sections = [
   },
   {
     title: "Por quanto tempo guardamos",
-    body: "Enquanto sua conta existir. Códigos expiram em 10 minutos; sessões, em até 30 dias sem uso. Excluir um sorteio apaga seus resultados e mensagens. Excluir a conta apaga seus dados pessoais e presentes.",
+    body: "Enquanto sua conta existir. Links para criar nova senha expiram em 30 minutos; sessões, em até 30 dias sem uso. Excluir um sorteio apaga seus resultados e mensagens. Excluir a conta apaga seus dados pessoais e presentes.",
   },
 ];
 

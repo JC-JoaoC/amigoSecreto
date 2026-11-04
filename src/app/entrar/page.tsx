@@ -13,7 +13,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   if (await getCurrentUser()) redirect(next ?? "/");
 
   return (
-    <AuthShell title="Entrar" subtitle="Digite seu e-mail e enviaremos um código para você entrar.">
+    <AuthShell title="Entrar" subtitle="Use o e-mail e a senha que você cadastrou.">
       <LoginForm next={next} initialEmail={typeof sp.email === "string" ? sp.email.slice(0, 254) : ""} />
     </AuthShell>
   );

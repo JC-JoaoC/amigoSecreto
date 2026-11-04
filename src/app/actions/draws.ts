@@ -94,7 +94,7 @@ export async function leaveDrawAction(drawId: string): Promise<ActionResult> {
 export async function searchAddableUsersAction(
   drawId: string,
   q: string,
-): Promise<ActionResult<{ id: string; name: string }[]>> {
+): Promise<ActionResult<{ id: string; name: string; avatarUrl: string | null }[]>> {
   return runAction("search-addable", async () => {
     const user = await requireUserForAction();
     return listAddableUsers(user, drawId, q);

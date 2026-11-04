@@ -9,7 +9,7 @@ import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/cn";
 
-type U = { id: string; name: string };
+type U = { id: string; name: string; avatarUrl: string | null };
 
 /** Organizador escolhe pessoas cadastradas (e verificadas) para entrar no sorteio. */
 export function AddParticipants({ drawId }: { drawId: string }) {
@@ -122,7 +122,7 @@ export function AddParticipants({ drawId }: { drawId: string }) {
                         )}
                       >
                         <input type="checkbox" className="peer sr-only" checked={on} onChange={() => toggle(u.id)} />
-                        <Avatar name={u.name} seed={u.id} size="sm" className="ring-2" />
+                        <Avatar name={u.name} seed={u.id} src={u.avatarUrl} size="sm" />
                         <span className="flex-1 text-[15px] text-ink">{u.name}</span>
                         <span className={cn("grid size-5 place-items-center rounded border-2", on ? "border-pine-900 bg-pine-900 text-white" : "border-line-strong")} aria-hidden>
                           {on && <Check className="size-4" />}

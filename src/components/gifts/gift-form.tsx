@@ -5,6 +5,7 @@ import { createGiftAction, updateGiftAction } from "@/app/actions/gifts";
 import { Button } from "@/components/ui/button";
 import { InputField, TextareaField, focusFirstError } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
+import { suggestTitleFromUrl } from "@/lib/product-title";
 import { LIMITS, fieldErrorsOf, giftInputSchema } from "@/lib/validation";
 import type { GiftView } from "./gift-card";
 
@@ -16,6 +17,8 @@ export function GiftForm({ gift, onDone, onCancel }: { gift?: GiftView; onDone: 
   const [title, setTitle] = useState(gift?.title ?? "");
   const [url, setUrl] = useState(gift?.url ?? "");
   const [description, setDescription] = useState(gift?.description ?? "");
+  // Último nome sugerido pelo link: só ele pode ser trocado automaticamente.
+  const [autoTitle, setAutoTitle] = useState<string | null>(null);
   const [errors, setErrors] = useState<Errors>({});
   const [pending, startTransition] = useTransition();
 
@@ -49,6 +52,32 @@ export function GiftForm({ gift, onDone, onCancel }: { gift?: GiftView; onDone: 
       }}
     >
       <InputField
+        label="Link do produto"
+        type="url"
+        inputMode="url"
+        placeholder="https://www.loja.com.br/produto"
+        autoComplete="off"
+        spellCheck={false}
+        value={url}
+        onChange={(e) => {
+          const value = e.target.value;
+          setUrl(value);
+          setErrors((x) => ({ ...x, url: undefined }));
+          // Preenche o nome a partir do link, sem nunca apagar o que a pessoa digitou.
+          const suggestion = suggestTitleFromUrl(value);
+          if (suggestion && (title.trim() === "" || title === autoTitle)) {
+            setTitle(suggestion);
+            setAutoTitle(suggestion);
+            setErrors((x) => ({ ...x, title: undefined }));
+          }
+        }}
+        error={errors.url}
+        hint="Cole o link da página do produto. Em lojas como Mercado Livre, Amazon e Magalu o nome aparece sozinho."
+        maxLength={LIMITS.giftUrlMax}
+        autoFocus
+        required
+      />
+      <InputField
         label="Nome do presente"
         placeholder="Ex.: Fone Bluetooth JBL"
         autoComplete="off"
@@ -58,25 +87,8 @@ export function GiftForm({ gift, onDone, onCancel }: { gift?: GiftView; onDone: 
           setErrors((x) => ({ ...x, title: undefined }));
         }}
         error={errors.title}
+        hint={autoTitle && title === autoTitle ? "Nome tirado do link. Ajuste se quiser." : undefined}
         maxLength={LIMITS.giftTitleMax}
-        autoFocus
-        required
-      />
-      <InputField
-        label="Link do produto"
-        type="url"
-        inputMode="url"
-        placeholder="https://www.loja.com.br/produto"
-        autoComplete="off"
-        spellCheck={false}
-        value={url}
-        onChange={(e) => {
-          setUrl(e.target.value);
-          setErrors((x) => ({ ...x, url: undefined }));
-        }}
-        error={errors.url}
-        hint="Cole o endereço da página do produto na loja."
-        maxLength={LIMITS.giftUrlMax}
         required
       />
       <TextareaField

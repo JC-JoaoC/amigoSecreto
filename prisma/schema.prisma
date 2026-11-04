@@ -22,7 +22,12 @@ enum MessageDirection {
 
 enum DrawStatus {
   OPEN // aceitando participantes
-  COMPLETED // sorteio realizado — imutável
+  COMPLETED // sorteio realizado, imutável
+}
+
+enum TokenPurpose {
+  RESET_PASSWORD // "esqueci minha senha"
+  VERIFY_EMAIL // confirmação do e-mail (obrigatória só para virar organizador)
 }
 
 model User {
@@ -33,18 +38,23 @@ model User {
   /// Sempre normalizado (trim + minúsculas) antes de gravar.
   email           String    @unique @db.VarChar(254)
   role            Role      @default(USER)
-  /// Preenchido no primeiro login confirmado. Contas não verificadas não aparecem na lista pública.
+  /// Hash scrypt da senha. Nulo em contas antigas (do login por código): definem a senha em "Esqueci minha senha".
+  passwordHash    String?   @map("password_hash") @db.VarChar(255)
+  /// Preenchido quando a pessoa prova que é dona do e-mail (link de confirmação ou de nova senha).
   emailVerifiedAt DateTime? @map("email_verified_at")
+  /// Quando a foto de perfil mudou pela última vez (versiona a URL da foto; nulo = sem foto).
+  avatarUpdatedAt DateTime? @map("avatar_updated_at")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
   gifts          Gift[]
   sessions       Session[]
-  loginCodes     LoginCode[]
+  authTokens     AuthToken[]
+  avatar         UserAvatar?
   participations DrawParticipant[]
   createdDraws   Draw[]            @relation("DrawCreator")
 
-  @@index([emailVerifiedAt, searchName])
+  @@index([searchName])
   @@map("users")
 }
 
@@ -77,20 +87,21 @@ model Session {
   @@map("sessions")
 }
 
-model LoginCode {
-  id         String    @id @default(cuid())
-  userId     String    @map("user_id")
-  /// HMAC-SHA256(APP_SECRET, código). O código em texto nunca é gravado.
-  codeHash   String    @map("code_hash") @db.VarChar(64)
-  attempts   Int       @default(0)
-  expiresAt  DateTime  @map("expires_at")
-  consumedAt DateTime? @map("consumed_at")
-  createdAt  DateTime  @default(now()) @map("created_at")
+/// Links de uso único enviados por e-mail (nova senha, confirmação de e-mail).
+model AuthToken {
+  id        String       @id @default(cuid())
+  userId    String       @map("user_id")
+  purpose   TokenPurpose
+  /// SHA-256 do token do link. O token em si nunca é gravado.
+  tokenHash String       @unique @map("token_hash") @db.VarChar(64)
+  expiresAt DateTime     @map("expires_at")
+  usedAt    DateTime?    @map("used_at")
+  createdAt DateTime     @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, createdAt])
-  @@map("login_codes")
+  @@index([userId, purpose])
+  @@map("auth_tokens")
 }
 
 /// Contadores de janela fixa para rate limiting (funciona com várias instâncias/serverless).
@@ -176,4 +187,17 @@ model DrawMessage {
 
   @@index([resultId, createdAt])
   @@map("draw_messages")
+}
+
+/// Foto de perfil já reprocessada no servidor (WebP 256x256, sem metadados). Tabela separada
+/// para a imagem não ser carregada junto em toda consulta de usuário.
+model UserAvatar {
+  userId    String   @id @map("user_id")
+  data      Bytes
+  mimeType  String   @map("mime_type") @db.VarChar(32)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_avatars")
 }

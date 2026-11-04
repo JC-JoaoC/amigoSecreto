@@ -3,11 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { deleteAccountAction, updateNameAction } from "@/app/actions/account";
+import { changePasswordAction, resendVerificationAction } from "@/app/actions/auth";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { InputField } from "@/components/ui/field";
+import { PasswordField } from "@/components/ui/password-field";
 import { useToast } from "@/components/ui/toast";
-import { LIMITS, nameSchema } from "@/lib/validation";
+import { LIMITS, changePasswordSchema, fieldErrorsOf, nameSchema } from "@/lib/validation";
 
 export function NameForm({ initialName }: { initialName: string }) {
   const toast = useToast();
@@ -108,5 +110,96 @@ export function DataActions() {
         />
       </ConfirmDialog>
     </div>
+  );
+}
+
+/** Troca de senha logado: pede a atual e encerra as outras sessões. */
+export function ChangePasswordForm() {
+  const toast = useToast();
+  const [current, setCurrent] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<{ current?: string; password?: string; form?: string }>({});
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <form
+      noValidate
+      className="space-y-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const parsed = changePasswordSchema.safeParse({ current, password });
+        if (!parsed.success) {
+          const fe = fieldErrorsOf(parsed.error);
+          setErrors({ current: fe.current?.[0], password: fe.password?.[0] });
+          return;
+        }
+        startTransition(async () => {
+          const r = await changePasswordAction({ current, password });
+          if (!r.ok) {
+            const fe = r.fieldErrors ?? {};
+            setErrors({ current: fe.current?.[0], password: fe.password?.[0], form: r.fieldErrors ? undefined : r.error });
+            return;
+          }
+          setCurrent("");
+          setPassword("");
+          setErrors({});
+          toast.success(r.message ?? "Senha alterada.");
+        });
+      }}
+    >
+      <PasswordField
+        label="Senha atual"
+        name="current-password"
+        autoComplete="current-password"
+        value={current}
+        onChange={(e) => {
+          setCurrent(e.target.value);
+          setErrors((x) => ({ ...x, current: undefined }));
+        }}
+        error={errors.current}
+      />
+      <PasswordField
+        label="Nova senha"
+        name="new-password"
+        autoComplete="new-password"
+        value={password}
+        onChange={(e) => {
+          setPassword(e.target.value);
+          setErrors((x) => ({ ...x, password: undefined }));
+        }}
+        error={errors.password}
+        hint="Pelo menos 8 caracteres."
+      />
+      {errors.form && (
+        <p aria-live="polite" className="rounded-panel bg-berry-50 p-3 text-[15px] text-berry-700">
+          {errors.form}
+        </p>
+      )}
+      <Button type="submit" loading={pending} disabled={!current || !password}>
+        {pending ? "Salvando…" : "Trocar senha"}
+      </Button>
+    </form>
+  );
+}
+
+/** Reenvia o link de confirmação de e-mail. */
+export function ResendVerificationButton() {
+  const toast = useToast();
+  const [pending, startTransition] = useTransition();
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      loading={pending}
+      onClick={() =>
+        startTransition(async () => {
+          const r = await resendVerificationAction();
+          if (!r.ok) toast.error(r.error);
+          else toast.success(r.data.alreadyVerified ? "Seu e-mail já está confirmado." : "Enviamos um novo link de confirmação.");
+        })
+      }
+    >
+      {pending ? "Enviando…" : "Reenviar link de confirmação"}
+    </Button>
   );
 }

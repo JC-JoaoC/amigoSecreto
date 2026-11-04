@@ -9,6 +9,7 @@ export const LIMITS = {
   nameMin: 2,
   nameMax: 80,
   emailMax: 254,
+  passwordMax: 128,
   giftTitleMax: 120,
   giftUrlMax: 2048,
   giftDescriptionMax: 500,
@@ -43,10 +44,26 @@ export const emailSchema = z
       .pipe(z.email({ error: "Digite um e-mail válido, como nome@exemplo.com." })),
   );
 
-export const codeSchema = z
-  .string({ error: "Digite o código recebido." })
-  .transform((v) => v.replace(/\D/g, ""))
-  .pipe(z.string().length(6, { error: "O código tem 6 dígitos." }));
+// Senhas fracas demais para aceitar (lista curta das mais usadas no Brasil).
+const COMMON_PASSWORDS = new Set([
+  "12345678", "123456789", "1234567890", "12341234", "87654321", "11111111", "00000000",
+  "password", "password1", "senha123", "senha1234", "senhasenha", "qwerty123", "qwertyuiop",
+  "abcdefgh", "abc12345", "iloveyou", "brasil123", "amigosecreto", "amigo123", "mudar123",
+]);
+
+/** Senha nova: mínimo 8 caracteres. Não é aparada (espaços contam). */
+export const passwordSchema = z
+  .string({ error: "Crie uma senha." })
+  .min(8, { error: "Use pelo menos 8 caracteres." })
+  .max(LIMITS.passwordMax, { error: `Use no máximo ${LIMITS.passwordMax} caracteres.` })
+  .refine((v) => !COMMON_PASSWORDS.has(v.toLowerCase()), { error: "Essa senha é muito comum. Escolha outra." })
+  .refine((v) => !/^(.)\1+$/.test(v), { error: "Evite repetir o mesmo caractere." });
+
+/** Senha digitada no login: só exige que exista (a regra de força vale ao criar). */
+const typedPasswordSchema = z
+  .string({ error: "Digite sua senha." })
+  .min(1, { error: "Digite sua senha." })
+  .max(LIMITS.passwordMax, { error: "Senha inválida." });
 
 /** Só aceita http/https, sem usuário/senha embutidos e com domínio válido. */
 export function parseSafeUrl(raw: string): URL | null {
@@ -98,9 +115,14 @@ export const giftInputSchema = z.object({
 });
 export type GiftInput = z.input<typeof giftInputSchema>;
 
-export const registerSchema = z.object({ name: nameSchema, email: emailSchema });
-export const loginEmailSchema = z.object({ email: emailSchema });
-export const verifyCodeSchema = z.object({ email: emailSchema, code: codeSchema });
+export const registerSchema = z.object({ name: nameSchema, email: emailSchema, password: passwordSchema });
+export const loginSchema = z.object({ email: emailSchema, password: typedPasswordSchema });
+export const forgotPasswordSchema = z.object({ email: emailSchema });
+export const resetPasswordSchema = z.object({
+  token: z.string({ error: "Link inválido." }).min(20, { error: "Link inválido." }).max(200, { error: "Link inválido." }),
+  password: passwordSchema,
+});
+export const changePasswordSchema = z.object({ current: typedPasswordSchema, password: passwordSchema });
 
 const dateOnly = z
   .string()

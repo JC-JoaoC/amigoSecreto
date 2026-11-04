@@ -1,24 +1,25 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
-import { requestCodeAction } from "@/app/actions/auth";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { loginAction } from "@/app/actions/auth";
+import { Button } from "@/components/ui/button";
 import { InputField, focusFirstError } from "@/components/ui/field";
-import { emailSchema } from "@/lib/validation";
-import { CodeStep } from "./code-step";
+import { PasswordField } from "@/components/ui/password-field";
+import { useToast } from "@/components/ui/toast";
+import { fieldErrorsOf, loginSchema } from "@/lib/validation";
+
+type Errors = { email?: string; password?: string; form?: string };
 
 export function LoginForm({ next, initialEmail = "" }: { next?: string; initialEmail?: string }) {
+  const router = useRouter();
+  const toast = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const [email, setEmail] = useState(initialEmail);
-  const [error, setError] = useState<string | null>(null);
-  const [notFound, setNotFound] = useState<string | null>(null);
-  const [sentTo, setSentTo] = useState<string | null>(null);
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<Errors>({});
   const [pending, startTransition] = useTransition();
-
-  if (sentTo) {
-    return <CodeStep email={sentTo} next={next} onChangeEmail={() => setSentTo(null)} />;
-  }
 
   return (
     <form
@@ -27,28 +28,28 @@ export function LoginForm({ next, initialEmail = "" }: { next?: string; initialE
       className="space-y-5"
       onSubmit={(e) => {
         e.preventDefault();
-        setNotFound(null);
-        const parsed = emailSchema.safeParse(email);
+        const parsed = loginSchema.safeParse({ email, password });
         if (!parsed.success) {
-          setError(parsed.error.issues[0]?.message ?? "E-mail inválido.");
+          const fe = fieldErrorsOf(parsed.error);
+          setErrors({ email: fe.email?.[0], password: fe.password?.[0] });
           focusFirstError(formRef.current);
           return;
         }
-        setError(null);
+        setErrors({});
         startTransition(async () => {
-          const r = await requestCodeAction({ email: parsed.data });
+          const r = await loginAction({ email: parsed.data.email, password, next });
           if (!r.ok) {
-            setError(r.error);
-            focusFirstError(formRef.current);
+            setErrors({ form: r.error });
             return;
           }
-          if (r.data.status === "not_found") setNotFound(r.data.email);
-          else setSentTo(r.data.email);
+          toast.success("Que bom te ver de novo.");
+          router.replace(r.data.redirectTo);
+          router.refresh();
         });
       }}
     >
       <InputField
-        label="Seu e-mail"
+        label="E-mail"
         type="email"
         name="email"
         autoComplete="email"
@@ -58,30 +59,42 @@ export function LoginForm({ next, initialEmail = "" }: { next?: string; initialE
         value={email}
         onChange={(e) => {
           setEmail(e.target.value);
-          setError(null);
+          setErrors((x) => ({ ...x, email: undefined, form: undefined }));
         }}
-        error={error ?? undefined}
-        hint="Vamos enviar um código de acesso. Não existe senha."
+        error={errors.email}
         required
       />
-
-      {notFound && (
-        <div aria-live="polite" className="animate-rise rounded-panel bg-mist p-4">
-          <p className="text-[15px] text-ink">
-            Não encontramos uma conta com <strong className="font-medium [overflow-wrap:anywhere]">{notFound}</strong>.
-          </p>
-          <ButtonLink
-            href={`/cadastro?email=${encodeURIComponent(notFound)}${next ? `&next=${encodeURIComponent(next)}` : ""}`}
-            size="sm"
-            className="mt-3"
+      <div className="space-y-1.5">
+        <PasswordField
+          label="Senha"
+          name="password"
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setErrors((x) => ({ ...x, password: undefined, form: undefined }));
+          }}
+          error={errors.password}
+          required
+        />
+        <p className="text-right text-sm">
+          <Link
+            href={`/esqueci-senha${email ? `?email=${encodeURIComponent(email.trim().toLowerCase())}` : ""}`}
+            className="text-ink-2 underline underline-offset-4 hover:text-ink"
           >
-            Criar conta com este e-mail
-          </ButtonLink>
-        </div>
+            Esqueci minha senha
+          </Link>
+        </p>
+      </div>
+
+      {errors.form && (
+        <p aria-live="polite" className="rounded-panel bg-berry-50 p-3 text-[15px] text-berry-700">
+          {errors.form}
+        </p>
       )}
 
       <Button type="submit" size="lg" className="w-full" loading={pending}>
-        {pending ? "Enviando código…" : "Receber código de acesso"}
+        {pending ? "Entrando…" : "Entrar"}
       </Button>
 
       <p className="text-[15px] text-ink-2">

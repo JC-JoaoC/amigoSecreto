@@ -21,13 +21,14 @@ export default async function HomePage({ searchParams }: HomeProps) {
     getCurrentUser(),
     listParticipants({ q, page }),
     getHomeStats(),
-    sampleFirstNames(6),
+    sampleFirstNames(24),
   ]);
 
   return (
     <>
       <Suspense>
         <UrlToast param="saiu" message="Você saiu da sua conta." />
+        <UrlToast param="senha" message="Nova senha salva. Você já entrou na sua conta." />
       </Suspense>
 
       <section className="border-b border-line">

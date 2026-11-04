@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { loginAs, readLoginCode, runTag, seedGift, seedUser } from "./helpers";
+import { E2E_ORGANIZER_PASSWORD } from "./global-setup";
+import { loginAs, runTag, seedGift, seedUser } from "./helpers";
 
 const ORGANIZER = "organizador-e2e@teste.dev";
 
@@ -12,12 +13,11 @@ test("organizador cria e realiza sorteio; participante revela só o próprio res
   ];
   for (const p of people) await seedGift(p.id, `Livro favorito de ${p.name}`, "https://livraria.exemplo.com/livro");
 
-  // Organizador entra pelo fluxo real de código por e-mail
+  // Organizador entra pelo fluxo real de e-mail e senha
   await page.goto("/entrar?next=/sorteios");
-  const since = Date.now() - 1000;
-  await page.getByLabel("Seu e-mail").fill(ORGANIZER);
-  await page.getByRole("button", { name: "Receber código de acesso" }).click();
-  await page.getByLabel("Código de acesso").fill(await readLoginCode(ORGANIZER, since));
+  await page.getByLabel("E-mail").fill(ORGANIZER);
+  await page.getByLabel("Senha", { exact: true }).fill(E2E_ORGANIZER_PASSWORD);
+  await page.getByRole("button", { name: "Entrar" }).click();
   await expect(page).toHaveURL(/\/sorteios$/);
 
   // Cria o sorteio

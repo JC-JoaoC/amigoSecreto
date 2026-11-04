@@ -36,7 +36,7 @@ export default async function ParticipantPage({ params }: Props) {
       </Link>
 
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center">
-        <Avatar name={participant.name} seed={participant.id} size="lg" />
+        <Avatar name={participant.name} seed={participant.id} src={participant.avatarUrl} size="lg" />
         <div className="min-w-0 flex-1">
           <h1 className="break-words text-[28px] font-bold leading-tight text-ink">{participant.name}</h1>
           <p className="mt-0.5 text-base text-ink-2">

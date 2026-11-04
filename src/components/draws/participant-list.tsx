@@ -9,7 +9,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 
-type P = { userId: string; name: string };
+type P = { userId: string; name: string; avatarUrl: string | null };
 
 export function ParticipantList({
   drawId,
@@ -40,7 +40,7 @@ export function ParticipantList({
       <ul className="divide-y divide-line rounded-panel border border-line bg-white">
         {participants.map((p) => (
           <li key={p.userId} className="flex min-h-13 items-center gap-3 px-4 py-2">
-            <Avatar name={p.name} seed={p.userId} size="sm" />
+            <Avatar name={p.name} seed={p.userId} src={p.avatarUrl} size="sm" />
             <Link href={`/participantes/${p.userId}`} className="min-w-0 flex-1 truncate text-[15px] text-ink hover:underline">
               {p.name}
               {p.userId === currentUserId && <span className="text-ink-3"> (você)</span>}

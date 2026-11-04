@@ -1,49 +1,75 @@
 import { expect, test } from "@playwright/test";
-import { readLoginCode, runTag } from "./helpers";
+import { readMailUrl, runTag, seedUser } from "./helpers";
+
+const PW = "senha-boa-e2e-123";
 
 test.describe("cadastro, login e meus presentes", () => {
   test("validação do cadastro mostra mensagens amigáveis", async ({ page }) => {
     await page.goto("/cadastro");
-    await page.getByRole("button", { name: "Criar conta e receber código" }).click();
+    await page.getByRole("button", { name: "Criar conta" }).click();
     await expect(page.getByText("Informe seu nome completo.")).toBeVisible();
     await expect(page.getByText("Informe seu e-mail.")).toBeVisible();
+    await expect(page.getByText("Use pelo menos 8 caracteres.")).toBeVisible();
     await page.getByLabel("Nome completo").fill("<script>alert(1)</script>");
     await page.getByLabel("E-mail").fill("ana@");
-    await page.getByRole("button", { name: "Criar conta e receber código" }).click();
+    await page.getByLabel("Senha", { exact: true }).fill("12345678");
+    await page.getByRole("button", { name: "Criar conta" }).click();
     await expect(page.getByText("Use apenas letras, espaços, hífen ou apóstrofo.")).toBeVisible();
     await expect(page.getByText(/Digite um e-mail válido/)).toBeVisible();
+    await expect(page.getByText("Essa senha é muito comum. Escolha outra.")).toBeVisible();
   });
 
-  test("e-mail não cadastrado oferece criar conta", async ({ page }) => {
-    const email = `nao-existe-${runTag()}@teste.dev`;
+  test("senha errada mostra mensagem genérica e oferece recuperar", async ({ page }) => {
+    const tag = runTag();
+    await seedUser(`Rita ${tag.replace(/\d/g, "r")}`, `rita-${tag}@teste.dev`, "USER", PW);
     await page.goto("/entrar");
-    await page.getByLabel("Seu e-mail").fill(email);
-    await page.getByRole("button", { name: "Receber código de acesso" }).click();
-    await expect(page.getByText("Não encontramos uma conta com")).toBeVisible();
-    await page.getByRole("link", { name: "Criar conta com este e-mail" }).click();
-    await expect(page).toHaveURL(/\/cadastro\?email=/);
-    await expect(page.getByLabel("E-mail")).toHaveValue(email);
+    await page.getByLabel("E-mail").fill(`rita-${tag}@teste.dev`);
+    await page.getByLabel("Senha", { exact: true }).fill("senha-errada-999");
+    await page.getByRole("button", { name: "Entrar" }).click();
+    await expect(page.getByText("E-mail ou senha incorretos.")).toBeVisible();
+    // E-mail que não existe recebe exatamente a mesma resposta
+    await page.getByLabel("E-mail").fill(`nao-existe-${tag}@teste.dev`);
+    await page.getByRole("button", { name: "Entrar" }).click();
+    await expect(page.getByText("E-mail ou senha incorretos.")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Esqueci minha senha" })).toBeVisible();
   });
 
-  test("fluxo completo: cadastro → código → presentes (adicionar, editar, excluir) → sair", async ({ page }) => {
+  test("esqueci minha senha: link no e-mail, nova senha e login", async ({ page }) => {
+    const tag = runTag();
+    const email = `lu-${tag}@teste.dev`;
+    await seedUser(`Lu ${tag.replace(/\d/g, "l")}`, email, "USER", PW);
+    await page.goto("/entrar");
+    await page.getByLabel("E-mail").fill(email);
+    await page.getByRole("link", { name: "Esqueci minha senha" }).click();
+    await expect(page).toHaveURL(/\/esqueci-senha\?email=/);
+    const since = Date.now() - 1000;
+    await page.getByRole("button", { name: "Enviar link para nova senha" }).click();
+    await expect(page.getByText("Confira seu e-mail")).toBeVisible();
+
+    const url = new URL(await readMailUrl(email, "password-reset", since));
+    await page.goto(url.pathname + url.search);
+    await page.getByLabel("Nova senha").fill("nova-senha-e2e-456");
+    await page.getByRole("button", { name: "Salvar nova senha" }).click();
+    await expect(page.getByText("Nova senha salva. Você já entrou na sua conta.")).toBeVisible();
+
+    // O mesmo link não funciona de novo
+    await page.goto(url.pathname + url.search);
+    await page.getByLabel("Nova senha").fill("outra-senha-e2e-789");
+    await page.getByRole("button", { name: "Salvar nova senha" }).click();
+    await expect(page.getByText(/Este link expirou ou já foi usado/)).toBeVisible();
+  });
+
+  test("fluxo completo: cadastro com senha → presentes (adicionar, editar, excluir) → sair → entrar", async ({ page }) => {
     const tag = runTag();
     const email = `Pessoa.${tag}@Teste.dev`;
     const name = `Teste Pessoa ${tag.replace(/\d/g, "x")}`;
 
-    // Cadastro
+    // Cadastro já entra na conta
     await page.goto("/cadastro");
-    const since = Date.now() - 1000;
     await page.getByLabel("Nome completo").fill(name);
     await page.getByLabel("E-mail").fill(email);
-    await page.getByRole("button", { name: "Criar conta e receber código" }).click();
-    await expect(page.getByText(/^Enviamos um código de 6 dígitos/)).toBeVisible();
-
-    // Código errado, depois o certo (e-mail foi normalizado para minúsculas)
-    const code = await readLoginCode(email.toLowerCase(), since);
-    const wrong = code === "000000" ? "111111" : "000000";
-    await page.getByLabel("Código de acesso").fill(wrong);
-    await expect(page.getByText(/Código incorreto/)).toBeVisible();
-    await page.getByLabel("Código de acesso").fill(code);
+    await page.getByLabel("Senha", { exact: true }).fill(PW);
+    await page.getByRole("button", { name: "Criar conta" }).click();
 
     await expect(page).toHaveURL(/\/meus-presentes\?bem-vindo=1/);
     await expect(page.getByText("Conta criada. Agora monte sua lista de desejos.")).toBeVisible();
@@ -53,6 +79,10 @@ test.describe("cadastro, login e meus presentes", () => {
     await page.getByRole("button", { name: "Adicionar presente" }).click();
     const dialog = page.getByRole("dialog", { name: "Adicionar presente" });
     await expect(dialog).toBeVisible();
+    // Colar um link do Mercado Livre preenche o nome sozinho
+    await dialog.getByLabel("Link do produto").fill("https://www.mercadolivre.com.br/fone-de-ouvido-jbl-tune-520bt/p/MLB25591473");
+    await expect(dialog.getByLabel("Nome do presente")).toHaveValue("Fone de ouvido jbl tune 520bt");
+    await expect(dialog.getByText("Nome tirado do link. Ajuste se quiser.")).toBeVisible();
     await dialog.getByLabel("Nome do presente").fill("Fone Bluetooth JBL");
     await dialog.getByLabel("Link do produto").fill("javascript:alert(1)");
     await dialog.getByRole("button", { name: "Adicionar presente" }).click();
@@ -80,6 +110,9 @@ test.describe("cadastro, login e meus presentes", () => {
     // Aparece na página pública
     await page.goto("/");
     await page.getByRole("searchbox", { name: "Buscar participante pelo nome" }).fill(name);
+    // Espera a busca (com atraso de 300 ms) chegar ao endereço antes de clicar,
+    // senão ela pode substituir a navegação do clique.
+    await expect(page).toHaveURL(/[?&]q=/);
     const me = page.getByRole("listitem").filter({ hasText: name });
     await expect(me.getByText("Você")).toBeVisible();
     await expect(me.getByText("1 presente")).toBeVisible();
@@ -102,6 +135,13 @@ test.describe("cadastro, login e meus presentes", () => {
     await page.getByRole("button", { name: "Sair" }).click();
     await expect(page.getByText("Você saiu da sua conta.")).toBeVisible();
     await page.goto("/meus-presentes");
-    await expect(page).toHaveURL(/\/entrar/);
+    await expect(page).toHaveURL(/\/entrar\?next=/);
+
+    // Entra de novo com e-mail e senha e volta para onde queria ir
+    await page.getByLabel("E-mail").fill(email);
+    await page.getByLabel("Senha", { exact: true }).fill(PW);
+    await page.getByRole("button", { name: "Entrar" }).click();
+    await expect(page).toHaveURL(/\/meus-presentes$/);
+    await expect(page.getByRole("heading", { name: "Meus presentes", level: 1 })).toBeVisible();
   });
 });

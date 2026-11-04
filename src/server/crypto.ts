@@ -6,7 +6,6 @@ import {
   createHmac,
   hkdfSync,
   randomBytes,
-  randomInt,
   timingSafeEqual,
 } from "node:crypto";
 import { env } from "./env";
@@ -14,10 +13,9 @@ import { env } from "./env";
 /**
  * Toda a criptografia da aplicação passa por aqui.
  * Uma única APP_SECRET gera chaves independentes por finalidade (HKDF),
- * então vazar o hash de um código não ajuda a decifrar resultados, e vice-versa.
+ * então uma chave vazada não ajuda a decifrar dados de outra finalidade.
  */
 type KeyPurpose =
-  | "login-code"
   | "draw-receiver-hash"
   | "draw-receiver-cipher"
   | "draw-message-cipher"
@@ -51,12 +49,7 @@ export function safeEqualHex(a: string, b: string): boolean {
   return ba.length === bb.length && timingSafeEqual(ba, bb);
 }
 
-/** Código numérico de 6 dígitos com aleatoriedade criptográfica. */
-export function generateLoginCode(): string {
-  return randomInt(0, 1_000_000).toString().padStart(6, "0");
-}
-
-/** Token de sessão: 256 bits aleatórios. */
+/** Token aleatório de 256 bits (sessões e links enviados por e-mail). */
 export function generateSessionToken(): string {
   return randomBytes(32).toString("base64url");
 }

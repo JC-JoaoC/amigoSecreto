@@ -1,183 +1,215 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const sent: { to: string; meta?: Record<string, string> }[] = [];
+type Sent = { to: string; meta?: Record<string, string> };
+const sent: Sent[] = [];
+let failNextMail = false;
 vi.mock("@/server/mail/mailer", () => ({
-  sendMail: vi.fn(async (m: { to: string; meta?: Record<string, string> }) => {
+  sendMail: vi.fn(async (m: Sent) => {
+    if (failNextMail) {
+      failNextMail = false;
+      throw new Error("SMTP fora do ar");
+    }
     sent.push(m);
   }),
 }));
 
 import { prisma } from "@/server/db";
-import { registerUser, requestLoginCode, verifyLoginCode, LOGIN_CODE_MAX_ATTEMPTS } from "@/server/services/auth";
+import {
+  changePassword,
+  confirmEmail,
+  loginWithPassword,
+  registerUser,
+  requestPasswordReset,
+  resetPassword,
+} from "@/server/services/auth";
 import { SESSION_TTL_MS, createSession, invalidateSession, validateSessionToken } from "@/server/auth/session";
 import { sha256 } from "@/server/crypto";
 import { createUser, resetDb } from "../helpers/db";
 
-const lastCodeFor = (email: string) => [...sent].reverse().find((m) => m.to === email)?.meta?.code as string;
-
+const PW = "senha-boa-123";
 let ipSeq = 0;
 const freshIp = () => `10.0.0.${++ipSeq}`;
+
+/** Token do último link enviado para o e-mail (nova senha ou confirmação). */
+function lastToken(email: string, kind: "password-reset" | "verify-email") {
+  const m = [...sent].reverse().find((x) => x.to === email && x.meta?.kind === kind);
+  if (!m?.meta?.url) throw new Error(`nenhum e-mail ${kind} para ${email}`);
+  return new URL(m.meta.url).searchParams.get("token")!;
+}
 
 beforeEach(async () => {
   await resetDb();
   sent.length = 0;
+  failNextMail = false;
 });
 
-describe("cadastro", () => {
-  it("cadastro válido cria conta não verificada e envia código", async () => {
-    const r = await registerUser({ name: "Ana Souza", email: "  ANA@Teste.dev " }, freshIp());
-    expect(r.email).toBe("ana@teste.dev");
+describe("cadastro com senha", () => {
+  it("cria a conta já logada, guarda só o hash e envia link de confirmação", async () => {
+    const r = await registerUser({ name: "Ana Souza", email: "  ANA@Teste.dev ", password: PW }, freshIp());
     const user = await prisma.user.findUniqueOrThrow({ where: { email: "ana@teste.dev" } });
     expect(user.name).toBe("Ana Souza");
-    expect(user.searchName).toBe("ana souza");
+    expect(user.passwordHash).toMatch(/^scrypt\$/);
+    expect(user.passwordHash).not.toContain(PW);
     expect(user.emailVerifiedAt).toBeNull();
-    expect(lastCodeFor("ana@teste.dev")).toMatch(/^\d{6}$/);
-    // O código nunca é gravado em texto puro.
-    const code = await prisma.loginCode.findFirstOrThrow({ where: { userId: user.id } });
-    expect(code.codeHash).not.toContain(lastCodeFor("ana@teste.dev"));
+    expect((await validateSessionToken(r.token))?.user.id).toBe(user.id);
+    expect(lastToken("ana@teste.dev", "verify-email")).toBeTruthy();
   });
 
-  it("recusa e-mail inválido", async () => {
-    await expect(registerUser({ name: "Ana", email: "ana@" }, freshIp())).rejects.toMatchObject({ code: "VALIDATION" });
-  });
-
-  it("recusa nome vazio", async () => {
-    await expect(registerUser({ name: "  ", email: "ana@teste.dev" }, freshIp())).rejects.toMatchObject({
+  it("recusa e-mail inválido, nome vazio e senha fraca", async () => {
+    await expect(registerUser({ name: "Ana", email: "ana@", password: PW }, freshIp())).rejects.toMatchObject({ code: "VALIDATION" });
+    await expect(registerUser({ name: "  ", email: "ana@teste.dev", password: PW }, freshIp())).rejects.toMatchObject({
       code: "VALIDATION",
       fieldErrors: { name: expect.any(Array) },
     });
+    await expect(registerUser({ name: "Ana", email: "ana@teste.dev", password: "12345678" }, freshIp())).rejects.toMatchObject({
+      code: "VALIDATION",
+      fieldErrors: { password: expect.any(Array) },
+    });
+    expect(await prisma.user.count()).toBe(0);
   });
 
   it("recusa e-mail duplicado (mesmo com maiúsculas diferentes)", async () => {
-    await createUser({ email: "ana@teste.dev" });
-    await expect(registerUser({ name: "Outra Ana", email: "ANA@teste.DEV" }, freshIp())).rejects.toMatchObject({
+    await createUser({ email: "ana@teste.dev", password: PW });
+    await expect(registerUser({ name: "Outra Ana", email: "ANA@teste.DEV", password: PW }, freshIp())).rejects.toMatchObject({
       code: "CONFLICT",
     });
     expect(await prisma.user.count()).toBe(1);
   });
 
-  it("conta não verificada pode ser cadastrada de novo (não trava o e-mail de ninguém)", async () => {
-    await registerUser({ name: "Nome Errado", email: "ana@teste.dev" }, freshIp());
-    await registerUser({ name: "Ana Certa", email: "ana@teste.dev" }, freshIp());
-    const users = await prisma.user.findMany();
-    expect(users).toHaveLength(1);
-    expect(users[0].name).toBe("Ana Certa");
+  it("se o e-mail de confirmação falhar, a conta é criada mesmo assim", async () => {
+    failNextMail = true;
+    const r = await registerUser({ name: "Bia Lima", email: "bia@teste.dev", password: PW }, freshIp());
+    expect(await validateSessionToken(r.token)).not.toBeNull();
   });
 });
 
-describe("login por código", () => {
-  it("login válido: código correto cria sessão e verifica a conta", async () => {
-    await registerUser({ name: "Bia Lima", email: "bia@teste.dev" }, freshIp());
-    const result = await verifyLoginCode({ email: "bia@teste.dev", code: lastCodeFor("bia@teste.dev") }, freshIp());
-    expect(result.isNewAccount).toBe(true);
-    const session = await validateSessionToken(result.token);
-    expect(session?.user.email).toBe("bia@teste.dev");
-    const user = await prisma.user.findUniqueOrThrow({ where: { email: "bia@teste.dev" } });
-    expect(user.emailVerifiedAt).not.toBeNull();
-    // Token não é salvo em texto puro.
-    expect(await prisma.session.findUnique({ where: { id: result.token } })).toBeNull();
-    expect(await prisma.session.findUnique({ where: { id: sha256(result.token) } })).not.toBeNull();
+describe("login com senha", () => {
+  it("senha certa cria sessão; o token não é salvo em texto", async () => {
+    await createUser({ email: "caio@teste.dev", password: PW });
+    const r = await loginWithPassword({ email: "Caio@Teste.dev", password: PW }, freshIp());
+    expect((await validateSessionToken(r.token))?.user.email).toBe("caio@teste.dev");
+    expect(await prisma.session.findUnique({ where: { id: r.token } })).toBeNull();
+    expect(await prisma.session.findUnique({ where: { id: sha256(r.token) } })).not.toBeNull();
   });
 
-  it("usuário não cadastrado recebe not_found e nenhum e-mail", async () => {
-    const r = await requestLoginCode({ email: "ninguem@teste.dev" }, freshIp());
-    expect(r.status).toBe("not_found");
-    expect(sent).toHaveLength(0);
-  });
-
-  it("código incorreto é recusado e informa tentativas restantes", async () => {
-    await createUser({ email: "caio@teste.dev" });
-    await requestLoginCode({ email: "caio@teste.dev" }, freshIp());
-    const right = lastCodeFor("caio@teste.dev");
-    const wrong = right === "000000" ? "111111" : "000000";
-    await expect(verifyLoginCode({ email: "caio@teste.dev", code: wrong }, freshIp())).rejects.toMatchObject({
-      code: "CODE_INVALID",
-      userMessage: expect.stringContaining(`${LOGIN_CODE_MAX_ATTEMPTS - 1} tentativas`),
-    });
-  });
-
-  it("código expirado é recusado", async () => {
-    const u = await createUser({ email: "duda@teste.dev" });
-    await requestLoginCode({ email: "duda@teste.dev" }, freshIp());
-    await prisma.loginCode.updateMany({ where: { userId: u.id }, data: { expiresAt: new Date(Date.now() - 1000) } });
-    await expect(
-      verifyLoginCode({ email: "duda@teste.dev", code: lastCodeFor("duda@teste.dev") }, freshIp()),
-    ).rejects.toMatchObject({ code: "CODE_EXPIRED" });
-  });
-
-  it("código é de uso único", async () => {
-    await createUser({ email: "eva@teste.dev" });
-    await requestLoginCode({ email: "eva@teste.dev" }, freshIp());
-    const code = lastCodeFor("eva@teste.dev");
-    await verifyLoginCode({ email: "eva@teste.dev", code }, freshIp());
-    await expect(verifyLoginCode({ email: "eva@teste.dev", code }, freshIp())).rejects.toMatchObject({
-      code: "CODE_EXPIRED",
-    });
-  });
-
-  it("pedir novo código invalida o anterior", async () => {
-    await createUser({ email: "fabi@teste.dev" });
-    await requestLoginCode({ email: "fabi@teste.dev" }, freshIp());
-    const first = lastCodeFor("fabi@teste.dev");
-    await requestLoginCode({ email: "fabi@teste.dev" }, freshIp());
-    const second = lastCodeFor("fabi@teste.dev");
-    if (first !== second) {
-      await expect(verifyLoginCode({ email: "fabi@teste.dev", code: first }, freshIp())).rejects.toBeTruthy();
-    }
-    await expect(verifyLoginCode({ email: "fabi@teste.dev", code: second }, freshIp())).resolves.toBeTruthy();
-  });
-
-  it("tentativas excessivas bloqueiam o código, mesmo acertando depois", async () => {
-    await createUser({ email: "gabi@teste.dev" });
-    await requestLoginCode({ email: "gabi@teste.dev" }, freshIp());
-    const right = lastCodeFor("gabi@teste.dev");
-    const wrong = right === "000000" ? "111111" : "000000";
-    for (let i = 0; i < LOGIN_CODE_MAX_ATTEMPTS - 1; i++) {
-      await expect(verifyLoginCode({ email: "gabi@teste.dev", code: wrong }, freshIp())).rejects.toMatchObject({
-        code: "CODE_INVALID",
+  it("senha errada, e-mail inexistente e conta sem senha dão a mesma resposta", async () => {
+    await createUser({ email: "duda@teste.dev", password: PW });
+    await createUser({ email: "antiga@teste.dev" }); // conta antiga, sem senha
+    for (const [email, password] of [
+      ["duda@teste.dev", "senha-errada-1"],
+      ["ninguem@teste.dev", PW],
+      ["antiga@teste.dev", PW],
+    ]) {
+      await expect(loginWithPassword({ email, password }, freshIp())).rejects.toMatchObject({
+        code: "INVALID_CREDENTIALS",
+        userMessage: "E-mail ou senha incorretos.",
       });
     }
-    await expect(verifyLoginCode({ email: "gabi@teste.dev", code: wrong }, freshIp())).rejects.toMatchObject({
-      code: "CODE_LOCKED",
-    });
-    await expect(verifyLoginCode({ email: "gabi@teste.dev", code: right }, freshIp())).rejects.toBeTruthy();
   });
 
-  it("rate limit: muitos pedidos de código para o mesmo e-mail são bloqueados", async () => {
-    await createUser({ email: "hugo@teste.dev" });
-    for (let i = 0; i < 5; i++) await requestLoginCode({ email: "hugo@teste.dev" }, freshIp());
-    await expect(requestLoginCode({ email: "hugo@teste.dev" }, freshIp())).rejects.toMatchObject({
-      code: "RATE_LIMITED",
-    });
-  });
-
-  it("rate limit: cadastros repetidos para o mesmo e-mail (de IPs diferentes) são bloqueados", async () => {
-    for (let i = 0; i < 5; i++) await registerUser({ name: "Vítima Alvo", email: "alvo@teste.dev" }, freshIp());
-    await expect(registerUser({ name: "Vítima Alvo", email: "alvo@teste.dev" }, freshIp())).rejects.toMatchObject({
-      code: "RATE_LIMITED",
-    });
-    expect(sent.filter((m) => m.to === "alvo@teste.dev")).toHaveLength(5);
-  });
-
-  it("rate limit: muitas verificações do mesmo IP são bloqueadas", async () => {
-    await createUser({ email: "iris@teste.dev" });
-    const ip = freshIp();
-    let limited = false;
-    for (let i = 0; i < 40 && !limited; i++) {
-      try {
-        await verifyLoginCode({ email: "iris@teste.dev", code: "123456" }, ip);
-      } catch (e) {
-        if ((e as { code?: string }).code === "RATE_LIMITED") limited = true;
-      }
+  it("limita tentativas por e-mail, mesmo trocando de IP", async () => {
+    await createUser({ email: "eva@teste.dev", password: PW });
+    for (let i = 0; i < 10; i++) {
+      await expect(loginWithPassword({ email: "eva@teste.dev", password: "errada-xyz" }, freshIp())).rejects.toMatchObject({
+        code: "INVALID_CREDENTIALS",
+      });
     }
-    expect(limited).toBe(true);
+    await expect(loginWithPassword({ email: "eva@teste.dev", password: PW }, freshIp())).rejects.toMatchObject({
+      code: "RATE_LIMITED",
+    });
+  });
+});
+
+describe("esqueci minha senha", () => {
+  it("envia link só se a conta existe, mas responde igual nos dois casos", async () => {
+    await createUser({ email: "fabi@teste.dev", password: PW });
+    await expect(requestPasswordReset({ email: "fabi@teste.dev" }, freshIp())).resolves.toEqual({ email: "fabi@teste.dev" });
+    await expect(requestPasswordReset({ email: "nao-existe@teste.dev" }, freshIp())).resolves.toEqual({
+      email: "nao-existe@teste.dev",
+    });
+    expect(sent.map((m) => m.to)).toEqual(["fabi@teste.dev"]);
   });
 
-  it("e-mail listado em ORGANIZER_EMAILS vira organizador ao entrar", async () => {
-    await registerUser({ name: "Organizadora", email: "organizadora@teste.dev" }, freshIp());
-    await verifyLoginCode({ email: "organizadora@teste.dev", code: lastCodeFor("organizadora@teste.dev") }, freshIp());
+  it("o link troca a senha, entra na conta, encerra sessões antigas e só funciona uma vez", async () => {
+    const u = await createUser({ email: "gabi@teste.dev", password: PW });
+    const old = await createSession(u.id);
+    await requestPasswordReset({ email: "gabi@teste.dev" }, freshIp());
+    const token = lastToken("gabi@teste.dev", "password-reset");
+
+    const r = await resetPassword({ token, password: "nova-senha-456" });
+    expect((await validateSessionToken(r.token))?.user.id).toBe(u.id);
+    expect(await validateSessionToken(old.token)).toBeNull();
+
+    await expect(loginWithPassword({ email: "gabi@teste.dev", password: PW }, freshIp())).rejects.toMatchObject({
+      code: "INVALID_CREDENTIALS",
+    });
+    await expect(loginWithPassword({ email: "gabi@teste.dev", password: "nova-senha-456" }, freshIp())).resolves.toBeTruthy();
+    await expect(resetPassword({ token, password: "outra-senha-789" })).rejects.toMatchObject({ code: "TOKEN_INVALID" });
+    // O link chegou no e-mail: o endereço fica confirmado.
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: u.id } })).emailVerifiedAt).not.toBeNull();
+  });
+
+  it("link expirado ou inventado não funciona", async () => {
+    await createUser({ email: "hugo@teste.dev", password: PW });
+    await requestPasswordReset({ email: "hugo@teste.dev" }, freshIp());
+    const token = lastToken("hugo@teste.dev", "password-reset");
+    await prisma.authToken.updateMany({ data: { expiresAt: new Date(Date.now() - 1000) } });
+    await expect(resetPassword({ token, password: "nova-senha-456" })).rejects.toMatchObject({ code: "TOKEN_INVALID" });
+    await expect(resetPassword({ token: "x".repeat(43), password: "nova-senha-456" })).rejects.toMatchObject({
+      code: "TOKEN_INVALID",
+    });
+  });
+
+  it("pedir um link novo invalida o anterior", async () => {
+    await createUser({ email: "iris@teste.dev", password: PW });
+    await requestPasswordReset({ email: "iris@teste.dev" }, freshIp());
+    const first = lastToken("iris@teste.dev", "password-reset");
+    await requestPasswordReset({ email: "iris@teste.dev" }, freshIp());
+    await expect(resetPassword({ token: first, password: "nova-senha-456" })).rejects.toMatchObject({ code: "TOKEN_INVALID" });
+  });
+
+  it("limita pedidos de link por e-mail", async () => {
+    await createUser({ email: "joao@teste.dev", password: PW });
+    for (let i = 0; i < 3; i++) await requestPasswordReset({ email: "joao@teste.dev" }, freshIp());
+    await expect(requestPasswordReset({ email: "joao@teste.dev" }, freshIp())).rejects.toMatchObject({ code: "RATE_LIMITED" });
+  });
+});
+
+describe("confirmação de e-mail e organizador", () => {
+  it("e-mail de ORGANIZER_EMAILS só vira organizador depois de confirmar o e-mail", async () => {
+    await registerUser({ name: "Organizadora", email: "organizadora@teste.dev", password: PW }, freshIp());
+    await loginWithPassword({ email: "organizadora@teste.dev", password: PW }, freshIp());
+    expect((await prisma.user.findUniqueOrThrow({ where: { email: "organizadora@teste.dev" } })).role).toBe("USER");
+
+    const r = await confirmEmail({ token: lastToken("organizadora@teste.dev", "verify-email") });
+    expect(r.isOrganizer).toBe(true);
     const u = await prisma.user.findUniqueOrThrow({ where: { email: "organizadora@teste.dev" } });
     expect(u.role).toBe("ORGANIZER");
+    expect(u.emailVerifiedAt).not.toBeNull();
+  });
+
+  it("link de confirmação não serve para trocar senha (e vice-versa) e só vale uma vez", async () => {
+    await registerUser({ name: "Kika Reis", email: "kika@teste.dev", password: PW }, freshIp());
+    const verify = lastToken("kika@teste.dev", "verify-email");
+    await expect(resetPassword({ token: verify, password: "nova-senha-456" })).rejects.toMatchObject({ code: "TOKEN_INVALID" });
+    await expect(confirmEmail({ token: verify })).resolves.toMatchObject({ isOrganizer: false });
+    await expect(confirmEmail({ token: verify })).rejects.toMatchObject({ code: "TOKEN_INVALID" });
+  });
+});
+
+describe("troca de senha logado", () => {
+  it("exige a senha atual e encerra as outras sessões, mantendo a atual", async () => {
+    const u = await createUser({ email: "lia@teste.dev", password: PW });
+    const atual = await createSession(u.id);
+    const outra = await createSession(u.id);
+
+    await expect(changePassword(u.id, atual.token, { current: "errada-123", password: "nova-senha-456" })).rejects.toMatchObject({
+      code: "INVALID_CREDENTIALS",
+    });
+    await changePassword(u.id, atual.token, { current: PW, password: "nova-senha-456" });
+    expect(await validateSessionToken(atual.token)).not.toBeNull();
+    expect(await validateSessionToken(outra.token)).toBeNull();
+    await expect(loginWithPassword({ email: "lia@teste.dev", password: "nova-senha-456" }, freshIp())).resolves.toBeTruthy();
   });
 });
 
@@ -199,10 +231,7 @@ describe("sessão", () => {
   it("sessão perto de expirar é renovada (sliding)", async () => {
     const u = await createUser();
     const { token } = await createSession(u.id);
-    await prisma.session.update({
-      where: { id: sha256(token) },
-      data: { expiresAt: new Date(Date.now() + 24 * 3600 * 1000) },
-    });
+    await prisma.session.update({ where: { id: sha256(token) }, data: { expiresAt: new Date(Date.now() + 24 * 3600 * 1000) } });
     const r = await validateSessionToken(token);
     expect(r!.expiresAt.getTime()).toBeGreaterThan(Date.now() + SESSION_TTL_MS - 60_000);
   });

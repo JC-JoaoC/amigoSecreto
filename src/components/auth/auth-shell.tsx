@@ -5,7 +5,7 @@ import { sampleFirstNames } from "@/server/services/users";
 
 /** Telas de entrada: formulário à esquerda; à direita, como funciona (com nomes reais da turma). */
 export async function AuthShell({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
-  const names = await sampleFirstNames(3).catch(() => []);
+  const names = await sampleFirstNames(12).catch(() => []);
   return (
     <Container className="grid gap-12 py-12 sm:py-16 lg:grid-cols-[minmax(0,26rem)_1fr] lg:gap-20">
       <section className="animate-rise">
@@ -21,8 +21,8 @@ export async function AuthShell({ title, subtitle, children }: { title: string; 
         </h2>
         <div className="mt-4 max-w-md space-y-4 text-base text-ink">
           <p>
-            <strong className="font-medium">Sem senha.</strong> A cada acesso enviamos um código de 6 dígitos para o seu e-mail.
-            Ninguém entra na sua conta sem ele.
+            <strong className="font-medium">E-mail e senha.</strong> Você cria a senha no cadastro e entra com ela. Esqueceu?
+            Mandamos um link para o seu e-mail para criar outra.
           </p>
           <p>
             <strong className="font-medium">Sua lista, com links.</strong> Cadastre o que você gostaria de ganhar. Todo mundo vê;

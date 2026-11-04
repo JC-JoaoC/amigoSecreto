@@ -56,13 +56,13 @@ describe("presentes", () => {
 });
 
 describe("participantes (home)", () => {
-  it("lista só contas verificadas, em ordem alfabética, sem e-mail", async () => {
+  it("lista todas as contas (com ou sem e-mail confirmado), em ordem alfabética, sem e-mail", async () => {
     await createUser({ name: "Zeca" });
     await createUser({ name: "Ana" });
     await createUser({ name: "Bruno" });
-    await createUser({ name: "Não Verificado", verified: false });
+    await createUser({ name: "Nina Pendente", verified: false });
     const r = await listParticipants({});
-    expect(r.items.map((i) => i.name)).toEqual(["Ana", "Bruno", "Zeca"]);
+    expect(r.items.map((i) => i.name)).toEqual(["Ana", "Bruno", "Nina Pendente", "Zeca"]);
     expect(r.items[0]).not.toHaveProperty("email");
   });
 

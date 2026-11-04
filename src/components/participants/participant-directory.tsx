@@ -3,7 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { toSearchText } from "@/lib/text";
 
-type Person = { id: string; name: string; giftCount: number };
+type Person = { id: string; name: string; avatarUrl: string | null; giftCount: number };
 
 function groupByLetter(people: Person[]) {
   const groups = new Map<string, Person[]>();
@@ -31,7 +31,7 @@ export function ParticipantDirectory({ people, meId }: { people: Person[]; meId?
                   href={`/participantes/${p.id}`}
                   className="group -mx-2 flex min-h-14 items-center gap-3 rounded-[var(--radius-control)] px-2 py-2 transition-colors hover:bg-mist"
                 >
-                  <Avatar name={p.name} seed={p.id} size="md" />
+                  <Avatar name={p.name} seed={p.id} src={p.avatarUrl} size="md" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium text-ink">
                       {p.name}

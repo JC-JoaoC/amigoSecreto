@@ -10,7 +10,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { firstName } from "@/lib/text";
 
-type NavUser = { id: string; name: string } | null;
+type NavUser = { id: string; name: string; avatarUrl: string | null } | null;
 
 const privateLinks = [
   { href: "/meus-presentes", label: "Meus presentes" },
@@ -71,7 +71,7 @@ export function HeaderNav({ user, unread = 0 }: { user: NavUser; unread?: number
         {user ? (
           <>
             <span className="flex items-center gap-2 text-[15px] text-ink">
-              <Avatar name={user.name} seed={user.id} size="sm" />
+              <Avatar name={user.name} seed={user.id} src={user.avatarUrl} size="sm" />
               {firstName(user.name)}
             </span>
             <form action={logoutAction}>
@@ -120,7 +120,7 @@ export function HeaderNav({ user, unread = 0 }: { user: NavUser; unread?: number
           <nav aria-label="Menu" className="mx-auto max-w-6xl px-4 py-3 sm:px-8">
             {user && (
               <p className="flex items-center gap-3 px-3 pb-3 pt-1 text-[15px] text-ink">
-                <Avatar name={user.name} seed={user.id} size="sm" />
+                <Avatar name={user.name} seed={user.id} src={user.avatarUrl} size="sm" />
                 {user.name}
               </p>
             )}

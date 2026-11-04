@@ -1,5 +1,6 @@
 import "server-only";
 import { drawInputSchema, idSchema } from "@/lib/validation";
+import { avatarUrl } from "@/lib/avatar";
 import { toSearchText } from "@/lib/text";
 import { decrypt, encrypt, hmac } from "../crypto";
 import { prisma, type Tx } from "../db";
@@ -78,7 +79,7 @@ export async function getDraw(actor: Actor, drawId: unknown) {
       createdBy: { select: { name: true } },
       participants: {
         orderBy: { user: { searchName: "asc" } },
-        select: { userId: true, user: { select: { name: true } } },
+        select: { userId: true, user: { select: { name: true, avatarUpdatedAt: true } } },
       },
     },
   });
@@ -97,28 +98,32 @@ export async function getDraw(actor: Actor, drawId: unknown) {
   return {
     ...draw,
     createdByName: draw.createdBy?.name ?? null,
-    participants: draw.participants.map((p) => ({ userId: p.userId, name: p.user.name })),
+    participants: draw.participants.map((p) => ({
+      userId: p.userId,
+      name: p.user.name,
+      avatarUrl: avatarUrl(p.userId, p.user.avatarUpdatedAt),
+    })),
     isParticipant,
     canManage: isOrg,
     revealedCount,
   };
 }
 
-/** Pessoas verificadas que ainda não estão no sorteio (para o organizador adicionar). */
+/** Pessoas cadastradas que ainda não estão no sorteio (para o organizador adicionar). */
 export async function listAddableUsers(actor: Actor, drawId: unknown, q?: string) {
   assertOrganizer(actor);
   const id = parseOrThrow(idSchema, drawId);
   const search = toSearchText(q ?? "").slice(0, 80);
-  return prisma.user.findMany({
+  const users = await prisma.user.findMany({
     where: {
-      emailVerifiedAt: { not: null },
       participations: { none: { drawId: id } },
       ...(search ? { searchName: { contains: search } } : {}),
     },
     orderBy: { searchName: "asc" },
     take: 50,
-    select: { id: true, name: true },
+    select: { id: true, name: true, avatarUpdatedAt: true },
   });
+  return users.map((u) => ({ id: u.id, name: u.name, avatarUrl: avatarUrl(u.id, u.avatarUpdatedAt) }));
 }
 
 // ───────────────────────────── Organização ─────────────────────────────
@@ -161,10 +166,7 @@ export async function addParticipants(actor: Actor, drawId: unknown, userIds: un
 
   return prisma.$transaction(async (tx) => {
     await lockOpenDraw(tx, id);
-    const valid = await tx.user.findMany({
-      where: { id: { in: ids }, emailVerifiedAt: { not: null } },
-      select: { id: true },
-    });
+    const valid = await tx.user.findMany({ where: { id: { in: ids } }, select: { id: true } });
     const created = await tx.drawParticipant.createMany({
       data: valid.map((u) => ({ drawId: id, userId: u.id })),
       skipDuplicates: true,

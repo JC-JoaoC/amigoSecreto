@@ -2,6 +2,9 @@ import { execSync } from "node:child_process";
 import { rm } from "node:fs/promises";
 import path from "node:path";
 import { Pool } from "pg";
+import { hashPassword } from "../../src/server/password";
+
+export const E2E_ORGANIZER_PASSWORD = "senha-do-organizador-e2e";
 
 /** Banco de teste limpo + organizador semeado + caixa de saída vazia. */
 export default async function globalSetup() {
@@ -11,11 +14,12 @@ export default async function globalSetup() {
 
   const pool = new Pool({ connectionString: url });
   await pool.query(
-    'TRUNCATE TABLE "draw_messages", "draw_results", "draw_participants", "draws", "gifts", "sessions", "login_codes", "rate_limits", "users" RESTART IDENTITY CASCADE',
+    'TRUNCATE TABLE "draw_messages", "draw_results", "draw_participants", "draws", "gifts", "user_avatars", "sessions", "auth_tokens", "rate_limits", "users" RESTART IDENTITY CASCADE',
   );
   await pool.query(
-    `INSERT INTO users (id, name, search_name, email, role, email_verified_at, created_at, updated_at)
-     VALUES ('e2eorganizer', 'Olívia Organizadora', 'olivia organizadora', 'organizador-e2e@teste.dev', 'ORGANIZER', now(), now(), now())`,
+    `INSERT INTO users (id, name, search_name, email, role, password_hash, email_verified_at, created_at, updated_at)
+     VALUES ('e2eorganizer', 'Olívia Organizadora', 'olivia organizadora', 'organizador-e2e@teste.dev', 'ORGANIZER', $1, now(), now(), now())`,
+    [await hashPassword(E2E_ORGANIZER_PASSWORD)],
   );
   await pool.end();
 

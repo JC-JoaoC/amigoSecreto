@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
+import { avatarUrl } from "@/lib/avatar";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { countUnreadMessages } from "@/server/services/messages";
 import { HeaderNav } from "./header-nav";
@@ -19,7 +20,7 @@ export async function Header() {
         <Link href="/" aria-label="Laço, página inicial" className="shrink-0 rounded-md">
           <Logo />
         </Link>
-        <HeaderNav user={user ? { id: user.id, name: user.name } : null} unread={unread} />
+        <HeaderNav user={user ? { id: user.id, name: user.name, avatarUrl: avatarUrl(user.id, user.avatarUpdatedAt) } : null} unread={unread} />
       </div>
     </header>
   );

@@ -12,7 +12,7 @@ export async function runAction<T>(name: string, fn: () => Promise<T>, message?:
     return { ok: true, data, message };
   } catch (error) {
     if (isAppError(error)) {
-      return { ok: false, error: error.userMessage, fieldErrors: error.fieldErrors };
+      return { ok: false, error: error.userMessage, code: error.code, fieldErrors: error.fieldErrors };
     }
     const err = error as Error;
     console.error(`[action:${name}] erro inesperado: ${err?.name ?? "Error"}: ${err?.message ?? String(error)}`);

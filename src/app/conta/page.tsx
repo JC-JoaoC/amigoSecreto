@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { DataActions, NameForm } from "@/components/account/account-forms";
+import { ChangePasswordForm, DataActions, NameForm, ResendVerificationButton } from "@/components/account/account-forms";
+import { AvatarForm } from "@/components/account/avatar-form";
+import { ButtonLink } from "@/components/ui/button";
 import { Container, PageHeader } from "@/components/ui/misc";
 import { formatDay } from "@/lib/format";
 import { requireUser } from "@/server/auth/current-user";
@@ -33,15 +35,24 @@ export default async function AccountPage() {
       <PageHeader title="Conta" />
 
       <div className="divide-y divide-line border-y border-line">
-        <Setting id="perfil" title="Perfil" description="Seu nome aparece na lista de participantes.">
-          <NameForm initialName={account.name} />
+        <Setting id="perfil" title="Perfil" description="Sua foto e seu nome aparecem na lista de participantes.">
+          <div className="space-y-8">
+            <AvatarForm name={account.name} seed={account.id} avatarUrl={account.avatarUrl} />
+            <NameForm initialName={account.name} />
+          </div>
         </Setting>
 
-        <Setting id="acesso" title="Acesso" description="Você entra com um código enviado para este e-mail. Ele não aparece para ninguém.">
+        <Setting id="acesso" title="Acesso" description="Você entra com este e-mail e sua senha. O e-mail não aparece para ninguém.">
           <dl className="space-y-2 text-[15px]">
             <div className="flex flex-wrap justify-between gap-x-4">
               <dt className="text-ink-2">E-mail</dt>
               <dd className="text-ink [overflow-wrap:anywhere]">{account.email}</dd>
+            </div>
+            <div className="flex flex-wrap justify-between gap-x-4">
+              <dt className="text-ink-2">Confirmação do e-mail</dt>
+              <dd className={account.emailVerifiedAt ? "text-pine-700" : "text-ink"}>
+                {account.emailVerifiedAt ? "Confirmado" : "Pendente"}
+              </dd>
             </div>
             <div className="flex flex-wrap justify-between gap-x-4">
               <dt className="text-ink-2">Permissão</dt>
@@ -52,6 +63,27 @@ export default async function AccountPage() {
               <dd className="text-ink">{formatDay(account.createdAt)}</dd>
             </div>
           </dl>
+          {!account.emailVerifiedAt && (
+            <div className="mt-4 rounded-panel bg-mist px-4 py-3">
+              <p className="mb-3 text-[15px] text-ink">
+                Confirme seu e-mail pelo link que enviamos no cadastro. Organizadores só recebem a permissão depois disso.
+              </p>
+              <ResendVerificationButton />
+            </div>
+          )}
+        </Setting>
+
+        <Setting id="senha" title="Senha" description="Ao trocar, as outras sessões abertas são encerradas.">
+          {account.hasPassword ? (
+            <ChangePasswordForm />
+          ) : (
+            <div className="space-y-3">
+              <p className="text-[15px] text-ink">Sua conta ainda não tem senha. Crie uma pelo link enviado ao seu e-mail.</p>
+              <ButtonLink href={`/esqueci-senha?email=${encodeURIComponent(account.email)}`} variant="outline">
+                Criar minha senha
+              </ButtonLink>
+            </div>
+          )}
         </Setting>
 
         <Setting

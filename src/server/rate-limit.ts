@@ -8,10 +8,12 @@ import { AppError } from "./errors";
  * Os identificadores (e-mail, IP) entram na chave como HMAC: nada legível fica salvo.
  */
 export const RATE_LIMITS = {
-  loginRequestPerEmail: { limit: 5, windowSeconds: 15 * 60 },
-  loginRequestPerIp: { limit: 20, windowSeconds: 15 * 60 },
-  verifyPerIp: { limit: 30, windowSeconds: 15 * 60 },
+  loginPerIp: { limit: 30, windowSeconds: 15 * 60 },
+  loginPerEmail: { limit: 10, windowSeconds: 15 * 60 },
   registerPerIp: { limit: 10, windowSeconds: 60 * 60 },
+  resetPerIp: { limit: 10, windowSeconds: 60 * 60 },
+  resetPerEmail: { limit: 3, windowSeconds: 60 * 60 },
+  verifyResendPerUser: { limit: 3, windowSeconds: 60 * 60 },
 } as const;
 
 export type RateLimitRule = { limit: number; windowSeconds: number };

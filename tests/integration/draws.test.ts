@@ -188,10 +188,11 @@ describe("preparação e participantes", () => {
     expect(await prisma.drawParticipant.count({ where: { drawId } })).toBe(3);
   });
 
-  it("não adiciona contas não verificadas", async () => {
+  it("adiciona contas com e-mail ainda não confirmado e ignora ids inexistentes", async () => {
     const { org, drawId } = await setup(0);
     const pending = await createUser({ verified: false });
-    expect((await addParticipants(actorOf(org), drawId, [pending.id])).added).toBe(0);
+    expect((await addParticipants(actorOf(org), drawId, [pending.id])).added).toBe(1);
+    expect((await addParticipants(actorOf(org), drawId, ["naoexiste123"])).added).toBe(0);
   });
 
   it("organizador remove participante antes do sorteio", async () => {

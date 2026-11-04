@@ -15,6 +15,7 @@ export type SessionUser = {
   name: string;
   email: string;
   role: "USER" | "ORGANIZER";
+  avatarUpdatedAt: Date | null;
 };
 
 export async function createSession(userId: string): Promise<{ token: string; expiresAt: Date }> {
@@ -33,13 +34,13 @@ export async function validateSessionToken(
     where: { id },
     select: {
       expiresAt: true,
-      user: { select: { id: true, name: true, email: true, role: true, emailVerifiedAt: true } },
+      user: { select: { id: true, name: true, email: true, role: true, avatarUpdatedAt: true } },
     },
   });
   if (!session) return null;
 
   const now = Date.now();
-  if (session.expiresAt.getTime() <= now || !session.user.emailVerifiedAt) {
+  if (session.expiresAt.getTime() <= now) {
     await prisma.session.deleteMany({ where: { id } });
     return null;
   }
@@ -50,8 +51,8 @@ export async function validateSessionToken(
     await prisma.session.update({ where: { id }, data: { expiresAt } });
   }
 
-  const { id: userId, name, email, role } = session.user;
-  return { user: { id: userId, name, email, role }, expiresAt };
+  const { id: userId, name, email, role, avatarUpdatedAt } = session.user;
+  return { user: { id: userId, name, email, role, avatarUpdatedAt }, expiresAt };
 }
 
 export async function invalidateSession(token: string | undefined | null): Promise<void> {

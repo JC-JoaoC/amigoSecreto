@@ -1,6 +1,7 @@
 import "server-only";
 import { nameSchema } from "@/lib/validation";
 import { toSearchText } from "@/lib/text";
+import { avatarUrl } from "@/lib/avatar";
 import { prisma } from "../db";
 import { AppError } from "../errors";
 import { parseOrThrow } from "../validate";
@@ -10,8 +11,8 @@ export const PARTICIPANTS_PAGE_SIZE = 60;
 /** Números reais exibidos na home. */
 export async function getHomeStats() {
   const [participants, listsWithGifts, nextDraw] = await Promise.all([
-    prisma.user.count({ where: { emailVerifiedAt: { not: null } } }),
-    prisma.user.count({ where: { emailVerifiedAt: { not: null }, gifts: { some: {} } } }),
+    prisma.user.count(),
+    prisma.user.count({ where: { gifts: { some: {} } } }),
     prisma.draw.findFirst({
       where: { status: "OPEN", eventDate: { gte: new Date(new Date().toISOString().slice(0, 10)) } },
       orderBy: { eventDate: "asc" },
@@ -24,13 +25,13 @@ export async function getHomeStats() {
 /** Primeiros nomes aleatórios para os papeizinhos do hero (mudam a cada visita). */
 export async function sampleFirstNames(limit = 7): Promise<string[]> {
   const rows = await prisma.$queryRaw<{ name: string }[]>`
-    SELECT "name" FROM "users" WHERE "email_verified_at" IS NOT NULL ORDER BY random() LIMIT ${limit}
+    SELECT "name" FROM "users" ORDER BY random() LIMIT ${limit}
   `;
   return rows.map((r) => r.name.split(" ")[0] ?? r.name);
 }
 
-/** Só contas verificadas aparecem publicamente. E-mail NUNCA é retornado em listagens públicas. */
-const publicWhere = { emailVerifiedAt: { not: null } } as const;
+/** Todas as contas aparecem na lista pública. E-mail NUNCA é retornado em listagens públicas. */
+const publicWhere = {} as const;
 
 export async function listParticipants(params: { q?: string; page?: number; pageSize?: number }) {
   const pageSize = Math.min(Math.max(params.pageSize ?? PARTICIPANTS_PAGE_SIZE, 1), 100);
@@ -49,11 +50,11 @@ export async function listParticipants(params: { q?: string; page?: number; page
     orderBy: [{ searchName: "asc" }, { id: "asc" }],
     skip: (page - 1) * pageSize,
     take: pageSize,
-    select: { id: true, name: true, _count: { select: { gifts: true } } },
+    select: { id: true, name: true, avatarUpdatedAt: true, _count: { select: { gifts: true } } },
   });
 
   return {
-    items: items.map((u) => ({ id: u.id, name: u.name, giftCount: u._count.gifts })),
+    items: items.map((u) => ({ id: u.id, name: u.name, avatarUrl: avatarUrl(u.id, u.avatarUpdatedAt), giftCount: u._count.gifts })),
     total,
     page,
     pageCount,
@@ -62,17 +63,21 @@ export async function listParticipants(params: { q?: string; page?: number; page
 }
 
 export async function getParticipantWithGifts(userId: string) {
-  return prisma.user.findFirst({
+  const user = await prisma.user.findFirst({
     where: { id: userId, ...publicWhere },
     select: {
       id: true,
       name: true,
+      avatarUpdatedAt: true,
       gifts: {
         orderBy: { createdAt: "asc" },
         select: { id: true, title: true, url: true, description: true },
       },
     },
   });
+  if (!user) return null;
+  const { avatarUpdatedAt, ...rest } = user;
+  return { ...rest, avatarUrl: avatarUrl(user.id, avatarUpdatedAt) };
 }
 
 export async function getAccount(userId: string) {
@@ -84,11 +89,16 @@ export async function getAccount(userId: string) {
       email: true,
       role: true,
       createdAt: true,
+      emailVerifiedAt: true,
+      avatarUpdatedAt: true,
+      passwordHash: true,
       _count: { select: { gifts: true, participations: true } },
     },
   });
   if (!user) throw new AppError("NOT_FOUND", "Conta não encontrada.");
-  return user;
+  // O hash nunca sai do servidor: a tela só precisa saber se existe senha.
+  const { passwordHash, ...rest } = user;
+  return { ...rest, hasPassword: Boolean(passwordHash), avatarUrl: avatarUrl(user.id, user.avatarUpdatedAt) };
 }
 
 export async function updateMyName(userId: string, rawName: unknown) {
@@ -125,6 +135,7 @@ export async function exportMyData(userId: string) {
       role: true,
       createdAt: true,
       emailVerifiedAt: true,
+      avatarUpdatedAt: true,
       gifts: { select: { title: true, url: true, description: true, createdAt: true } },
       participations: {
         select: { createdAt: true, draw: { select: { name: true, status: true, eventDate: true } } },

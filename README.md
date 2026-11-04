@@ -1,8 +1,8 @@
 # Laço — Amigo Secreto
 
-Plataforma web de amigo secreto: cadastro só com nome e e-mail, login sem senha (código enviado por e-mail), lista de desejos com links, sorteio feito no servidor, revelação individual — só a própria pessoa vê quem tirou — e mensagens anônimas entre cada par do sorteio.
+Plataforma web de amigo secreto: cadastro com nome, e-mail e senha, recuperação de senha por link no e-mail, lista de desejos com links, sorteio feito no servidor, revelação individual (só a própria pessoa vê quem tirou) e mensagens anônimas entre cada par do sorteio.
 
-**Stack:** Next.js 16 (App Router, Server Actions) · React 19 · TypeScript · Tailwind CSS 4 · PostgreSQL 17 · Prisma 7 · Zod 4 · Nodemailer · Vitest · Playwright.
+**Stack:** Next.js 16 (App Router, Server Actions) · React 19 · TypeScript · Tailwind CSS 4 · PostgreSQL 17 · Prisma 7 · Zod 4 · Nodemailer · sharp · Vitest · Playwright.
 
 ---
 
@@ -29,9 +29,9 @@ npm run db:migrate
 npm run dev
 ```
 
-Abra http://localhost:3000. Em desenvolvimento (`MAIL_TRANSPORT=console`) o código de acesso **aparece no terminal** do `npm run dev` e também fica salvo em `.mail-outbox/`.
+Abra http://localhost:3000 e crie sua conta com nome, e-mail e senha. Em desenvolvimento (`MAIL_TRANSPORT=console`), os e-mails (confirmação de e-mail e link de nova senha) **aparecem no terminal** do `npm run dev` e também ficam salvos em `.mail-outbox/`.
 
-**Primeiro organizador:** cadastre-se com o e-mail que está em `ORGANIZER_EMAILS`. Ao confirmar o código, a conta recebe a permissão de organizador (criar sorteios, adicionar/remover participantes e sortear).
+**Primeiro organizador:** cadastre-se com o e-mail que está em `ORGANIZER_EMAILS` e clique no link "Confirmar meu e-mail" que chega no cadastro. Só depois da confirmação a conta recebe a permissão de organizador (criar sorteios, adicionar/remover participantes e sortear). Isso impede que outra pessoa se cadastre com o seu e-mail e vire organizadora.
 
 ---
 
@@ -41,7 +41,7 @@ Abra http://localhost:3000. Em desenvolvimento (`MAIL_TRANSPORT=console`) o cód
 |---|---|---|
 | `DATABASE_URL` | sim | String de conexão do Postgres. |
 | `APP_URL` | sim | URL pública (usada nos links dos e-mails). |
-| `APP_SECRET` | sim | ≥ 32 caracteres. Deriva as chaves de hash dos códigos e de **cifra dos resultados**. ⚠️ Não troque depois do primeiro sorteio. |
+| `APP_SECRET` | sim | ≥ 32 caracteres. Deriva as chaves de **cifra dos resultados e das mensagens** e do rate limit. ⚠️ Não troque depois do primeiro sorteio. |
 | `MAIL_TRANSPORT` | sim | `console` (dev; bloqueado em produção) ou `smtp`. |
 | `MAIL_FROM` | sim | Remetente, ex.: `Laço <nao-responda@seudominio.com.br>`. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD` | com `smtp` | Credenciais do provedor de e-mail. |
@@ -74,8 +74,8 @@ Na primeira vez do E2E: `npx playwright install chromium`.
 | Suíte | O que cobre |
 |---|---|
 | `tests/unit` | Algoritmo do sorteio (2, 3, 10, 50 pessoas; uniformidade; fallback), validações (e-mail, nome, URLs perigosas), criptografia. |
-| `tests/integration` | Cadastro, login por código (errado, expirado, uso único, bloqueio por tentativas, rate limit), sessões (expirada, falsa, renovação, logout), presentes (CRUD, propriedade), sorteio (execução, duplicada, **simultânea**, falha no meio da transação, privacidade), mensagens anônimas (anonimato, acesso de terceiros, texto cifrado, não lidas), triggers do banco. |
-| `tests/e2e` | Navegação, redirecionamento de páginas privadas, cadastro → código → presentes → sair, sorteio completo com revelação e troca de mensagens anônimas, entrar/sair de sorteio, menu móvel, ausência de rolagem horizontal, cabeçalhos de segurança. |
+| `tests/integration` | Cadastro com senha (fraca, duplicada), login (senha errada e e-mail inexistente com a mesma resposta, limite de tentativas), nova senha por link (uso único, expirado, encerra sessões), confirmação de e-mail e organizador, troca de senha, sessões (expirada, falsa, renovação, logout), presentes (CRUD, propriedade), sorteio (execução, duplicada, **simultânea**, falha no meio da transação, privacidade), mensagens anônimas, triggers do banco. |
+| `tests/e2e` | Navegação, redirecionamento de páginas privadas, cadastro com senha → presentes → sair → entrar, senha errada, "Esqueci minha senha" com link do e-mail, sorteio completo com revelação e troca de mensagens anônimas, entrar/sair de sorteio, menu móvel, ausência de rolagem horizontal, cabeçalhos de segurança. |
 
 ---
 
@@ -102,7 +102,8 @@ Servidor próprio/VPS: `npm ci && npm run db:deploy && npm run build && npm star
 src/
 ├── app/                      # Rotas (App Router)
 │   ├── page.tsx              # Home: hero + participantes (busca, paginação)
-│   ├── entrar/ cadastro/     # Login e cadastro (e-mail → código)
+│   ├── entrar/ cadastro/     # Login e cadastro (e-mail + senha)
+│   ├── esqueci-senha/ redefinir-senha/ confirmar-email/  # Links enviados por e-mail
 │   ├── meus-presentes/       # CRUD da própria lista (privada)
 │   ├── participantes/[id]/   # Lista pública de presentes de alguém
 │   ├── sorteios/ [id]/       # Listagem, detalhes, painel do organizador
@@ -133,10 +134,11 @@ tests/ (unit, integration, e2e)
 
 | Tabela | Papel |
 |---|---|
-| `users` | Nome, e-mail normalizado (único), `search_name` (busca sem acento), papel (`USER`/`ORGANIZER`), `email_verified_at`. |
+| `users` | Nome, e-mail normalizado (único), hash da senha, `search_name` (busca sem acento), papel (`USER`/`ORGANIZER`), `email_verified_at` (e-mail confirmado por link). |
 | `gifts` | Presentes (título, URL validada, descrição) — FK para `users` com cascade. |
 | `sessions` | Sessões: id = SHA-256 do token do cookie, expiração deslizante (30 dias). |
-| `login_codes` | Códigos de 6 dígitos guardados como HMAC, expiração 10 min, contador de tentativas, uso único. |
+| `auth_tokens` | Links de uso único enviados por e-mail (nova senha: 30 min; confirmação de e-mail: 48 h), guardados só como SHA-256. |
+| `user_avatars` | Foto de perfil opcional, já reprocessada no servidor (WebP 256×256, sem metadados como GPS). Servida em `/api/avatar/<id>?v=<versão>`. |
 | `rate_limits` | Contadores de janela fixa (chaves com HMAC de e-mail/IP). |
 | `draws` | Sorteio (nome, valor sugerido, data, status `OPEN`/`COMPLETED`). Base para múltiplos grupos. |
 | `draw_participants` | Quem participa — único por (sorteio, usuário). |
@@ -170,18 +172,19 @@ Sem cara de template: superfícies brancas e cinza-claro, tinta verde quase pret
 
 ### Segurança
 
-- Login sem senha com prova de posse do e-mail (código de uso único, 10 min, 5 tentativas, comparação em tempo constante).
-- Rate limit por IP e por e-mail (pedido de código, verificação, cadastro).
+- Foto de perfil: toda imagem é decodificada e regravada pelo servidor (`sharp`), o que descarta arquivos que não são imagem e apaga metadados (EXIF/GPS). Servida com `Content-Security-Policy: sandbox`.
+- Senha guardada só como hash **scrypt** com sal; login com mensagem genérica ("E-mail ou senha incorretos.") e o mesmo tempo de resposta exista ou não a conta.
+- Rate limit por IP e por e-mail (login, cadastro, pedidos de nova senha). Trocar ou redefinir a senha encerra as outras sessões.
 - Cookie `HttpOnly`, `Secure` (produção), `SameSite=Lax`; token opaco de 256 bits, só o hash no banco.
 - Server Actions com checagem de origem do Next (CSRF) + sessão validada no banco em cada chamada.
 - Zod no servidor; Prisma com queries parametrizadas (SQL injection); React escapa HTML (XSS); URLs só `http/https`, links com `rel="noopener noreferrer nofollow"`.
 - Cabeçalhos: CSP, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, HSTS (produção).
-- Erros internos nunca chegam ao usuário; logs sem códigos, tokens ou e-mails.
+- Erros internos nunca chegam ao usuário; logs sem senhas, tokens ou e-mails.
 - LGPD: coleta mínima (nome + e-mail), política em `/privacidade`, exportação dos dados em JSON e exclusão da conta.
 
 ## Limitações conhecidas
 
-- **Login revela se o e-mail tem cadastro** (requisito: oferecer "criar conta"). Mitigado por rate limit; os nomes já são públicos na home.
+- **O cadastro revela se o e-mail já tem conta** ("Este e-mail já tem cadastro"). O login e o "Esqueci minha senha" não revelam.
 - Organizador não pode **refazer** um sorteio realizado (decisão de segurança). Para corrigir, exclua o sorteio e crie outro.
 - Pessoa em sorteio já realizado só exclui a conta depois que o organizador excluir o sorteio.
 - Sem upload de foto de perfil (avatar com iniciais).
