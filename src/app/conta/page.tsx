@@ -67,7 +67,7 @@ export default async function AccountPage() {
           }
         >
           <p className="mb-4 text-[15px] text-ink">
-            Se você estiver num sorteio já realizado, a exclusão fica liberada quando o organizador excluir o sorteio — assim
+            Se você estiver num sorteio já realizado, a exclusão fica liberada quando o organizador excluir o sorteio. Assim
             ninguém fica sem amigo secreto.
           </p>
           <DataActions />

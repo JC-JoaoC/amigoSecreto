@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { ParticipantDirectory } from "@/components/participants/participant-directory";
 import { Pagination } from "@/components/participants/pagination";
 import { ParticipantSearch } from "@/components/participants/participant-search";
-import { SlipPile, SlipRow } from "@/components/slips";
+import { GiftPile, GiftRow } from "@/components/gift-pile";
 import { ButtonLink } from "@/components/ui/button";
 import { Container, EmptyState } from "@/components/ui/misc";
 import { UrlToast } from "@/components/url-toast";
@@ -21,7 +21,7 @@ export default async function HomePage({ searchParams }: HomeProps) {
     getCurrentUser(),
     listParticipants({ q, page }),
     getHomeStats(),
-    sampleFirstNames(7),
+    sampleFirstNames(6),
   ]);
 
   return (
@@ -73,16 +73,16 @@ export default async function HomePage({ searchParams }: HomeProps) {
               <div className="py-3 pl-4">
                 <dt className="text-[13px] text-ink-3">Próxima troca</dt>
                 <dd className="mt-0.5 truncate text-2xl font-medium text-ink">
-                  {stats.nextDraw?.eventDate ? formatDayShort(stats.nextDraw.eventDate) : <span className="text-ink-3">—</span>}
+                  {stats.nextDraw?.eventDate ? formatDayShort(stats.nextDraw.eventDate) : <span className="text-ink-3">a definir</span>}
                 </dd>
               </div>
             </dl>
           </div>
 
           <div className="lg:hidden">
-            <SlipRow names={names} />
+            <GiftRow names={names} />
           </div>
-          <SlipPile names={names} className="hidden h-80 lg:block" />
+          <GiftPile names={names} className="hidden h-[22rem] lg:block" />
         </Container>
       </section>
 

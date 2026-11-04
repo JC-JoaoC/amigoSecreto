@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
-import { SlipRow } from "@/components/slips";
+import { GiftRow } from "@/components/gift-pile";
 import { Container } from "@/components/ui/misc";
 import { sampleFirstNames } from "@/server/services/users";
 
 /** Telas de entrada: formulário à esquerda; à direita, como funciona (com nomes reais da turma). */
 export async function AuthShell({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
-  const names = await sampleFirstNames(4).catch(() => []);
+  const names = await sampleFirstNames(3).catch(() => []);
   return (
     <Container className="grid gap-12 py-12 sm:py-16 lg:grid-cols-[minmax(0,26rem)_1fr] lg:gap-20">
       <section className="animate-rise">
@@ -15,7 +15,7 @@ export async function AuthShell({ title, subtitle, children }: { title: string; 
       </section>
 
       <aside aria-labelledby="como-funciona" className="hidden rounded-panel bg-mist p-10 lg:block">
-        <SlipRow names={names} />
+        <GiftRow names={names} />
         <h2 id="como-funciona" className="mt-10 text-xl font-bold text-ink">
           Como funciona
         </h2>

@@ -70,7 +70,7 @@ export default async function DrawsPage() {
                     <span className="text-ink-3 sm:sr-only"> {d.participantCount === 1 ? "participante" : "participantes"}</span>
                   </span>
                   <span className="text-[15px] text-ink-2">
-                    {d.eventDate ? formatDayShort(d.eventDate) : <span className="text-ink-3">—</span>}
+                    {d.eventDate ? formatDayShort(d.eventDate) : <span className="text-ink-3">sem data</span>}
                   </span>
                   <ChevronRight className="hidden size-4 text-ink-3 transition-transform group-hover:translate-x-0.5 sm:block" aria-hidden />
                 </Link>

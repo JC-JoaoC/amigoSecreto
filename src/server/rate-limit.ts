@@ -5,7 +5,7 @@ import { AppError } from "./errors";
 
 /**
  * Rate limiting de janela fixa guardado no Postgres (funciona com várias instâncias).
- * Os identificadores (e-mail, IP) entram na chave como HMAC — nada legível fica salvo.
+ * Os identificadores (e-mail, IP) entram na chave como HMAC: nada legível fica salvo.
  */
 export const RATE_LIMITS = {
   loginRequestPerEmail: { limit: 5, windowSeconds: 15 * 60 },

@@ -15,7 +15,7 @@ export async function runAction<T>(name: string, fn: () => Promise<T>, message?:
       return { ok: false, error: error.userMessage, fieldErrors: error.fieldErrors };
     }
     const err = error as Error;
-    console.error(`[action:${name}] erro inesperado: ${err?.name ?? "Error"} — ${err?.message ?? String(error)}`);
+    console.error(`[action:${name}] erro inesperado: ${err?.name ?? "Error"}: ${err?.message ?? String(error)}`);
     return { ok: false, error: "Algo deu errado do nosso lado. Tente novamente em instantes." };
   }
 }

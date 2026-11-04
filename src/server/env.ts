@@ -39,7 +39,7 @@ export function env(): Env {
   const parsed = envSchema.safeParse(process.env);
   if (!parsed.success) {
     const details = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
-    throw new Error(`Configuração inválida de ambiente — ${details}`);
+    throw new Error(`Configuração inválida de ambiente: ${details}`);
   }
   cached = parsed.data;
   return cached;

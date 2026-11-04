@@ -111,9 +111,9 @@ export function RegisterForm({ initialEmail = "", next }: { initialEmail?: strin
         <Link href="/entrar" className="font-medium text-ink underline underline-offset-4">
           Entrar
         </Link>
-        . Usamos só nome e e-mail —{" "}
+        . Usamos só nome e e-mail.{" "}
         <Link href="/privacidade" className="underline underline-offset-4 hover:text-ink">
-          veja como tratamos seus dados
+          Veja como tratamos seus dados
         </Link>
         .
       </p>

@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 /**
- * Checagem OTIMISTA: sem cookie de sessão, nem tenta abrir página privada — vai direto ao login.
+ * Checagem OTIMISTA: sem cookie de sessão, nem tenta abrir página privada e vai direto ao login.
  * A validação real (sessão no banco, expiração, permissões) acontece no servidor em cada página/ação.
  */
 const SESSION_COOKIE = "laco_session";

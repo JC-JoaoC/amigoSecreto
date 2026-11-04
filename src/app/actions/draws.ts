@@ -129,7 +129,7 @@ export async function runDrawAction(drawId: string): Promise<ActionResult<{ part
     async () => {
       const user = await requireUserForAction();
       const result = await runDraw(user, drawId);
-      // Avisos por e-mail depois da resposta — falhas de envio não afetam o sorteio.
+      // Avisos por e-mail depois da resposta. Falhas de envio não afetam o sorteio.
       after(() => notifyDrawCompleted(result));
       refresh(drawId);
       return { participantCount: result.participantCount };

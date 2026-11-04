@@ -15,7 +15,7 @@ const sections = [
   },
   {
     title: "O que fica visível",
-    body: "Seu nome e sua lista de presentes aparecem para quem usa a plataforma — é o objetivo do amigo secreto. Seu e-mail não aparece para ninguém.",
+    body: "Seu nome e sua lista de presentes aparecem para quem usa a plataforma, porque esse é o objetivo do amigo secreto. Seu e-mail não aparece para ninguém.",
   },
   {
     title: "Como protegemos",

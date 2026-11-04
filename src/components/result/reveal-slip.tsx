@@ -37,7 +37,7 @@ export function RevealSlip({ drawId, alreadyRevealed }: { drawId: string; alread
         </div>
         <p className="mt-5 max-w-xs text-[15px] text-ink-2">
           {alreadyRevealed
-            ? "Você já abriu este papel. Pode abrir de novo quando quiser — confira se ninguém está olhando."
+            ? "Você já abriu este papel. Pode abrir de novo quando quiser, mas confira se ninguém está olhando."
             : "Abra quando ninguém estiver olhando a sua tela."}
         </p>
         <Button variant="accent" size="lg" className="mt-4" onClick={open} loading={pending}>

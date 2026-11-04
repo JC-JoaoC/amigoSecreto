@@ -1,4 +1,4 @@
-/** Identidade da plataforma — troque aqui para renomear o produto. */
+/** Identidade da plataforma. Troque aqui para renomear o produto. */
 export const BRAND = {
   name: "Laço",
   tagline: "Amigo secreto sem complicação",

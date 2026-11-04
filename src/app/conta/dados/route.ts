@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/server/auth/current-user";
 import { exportMyData } from "@/server/services/users";
 
-/** LGPD — download dos próprios dados em JSON. */
+/** LGPD: download dos próprios dados em JSON. */
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return new Response("Não autenticado", { status: 401 });

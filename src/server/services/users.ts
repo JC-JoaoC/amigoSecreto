@@ -98,7 +98,7 @@ export async function updateMyName(userId: string, rawName: unknown) {
 }
 
 /**
- * LGPD — exclusão de dados. Bloqueada apenas enquanto a pessoa fizer parte de um sorteio
+ * LGPD, exclusão de dados. Bloqueada apenas enquanto a pessoa fizer parte de um sorteio
  * já realizado (apagar quebraria o amigo secreto de outra pessoa). O banco também garante isso.
  */
 export async function deleteMyAccount(userId: string) {
@@ -108,14 +108,14 @@ export async function deleteMyAccount(userId: string) {
   if (completed > 0) {
     throw new AppError(
       "CONFLICT",
-      "Você participa de um sorteio já realizado. Para não estragar a brincadeira de ninguém, peça ao organizador para excluir o sorteio depois da troca de presentes — aí você poderá apagar sua conta.",
+      "Você participa de um sorteio já realizado. Para não estragar a brincadeira de ninguém, peça ao organizador para excluir o sorteio depois da troca de presentes. Aí você poderá apagar sua conta.",
     );
   }
   // Cascata: presentes, sessões, códigos e inscrições em sorteios abertos.
   await prisma.user.delete({ where: { id: userId } });
 }
 
-/** LGPD — portabilidade: tudo que guardamos sobre a pessoa (sem segredos de terceiros). */
+/** LGPD, portabilidade: tudo que guardamos sobre a pessoa (sem segredos de terceiros). */
 export async function exportMyData(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },

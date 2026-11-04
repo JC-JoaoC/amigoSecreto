@@ -19,12 +19,12 @@ function assertOrganizer(actor: Actor) {
 
 const notFound = () => new AppError("NOT_FOUND", "Sorteio não encontrado.");
 const alreadyDone = () =>
-  new AppError("DRAW_COMPLETED", "Este sorteio já foi realizado — os participantes não podem mais mudar.");
+  new AppError("DRAW_COMPLETED", "Este sorteio já foi realizado. Os participantes não podem mais mudar.");
 
 /**
  * Trava a linha do sorteio (UPDATE condicional) enquanto ele está aberto.
  * Qualquer operação concorrente (inclusive o próprio sorteio) espera a transação terminar,
- * e depois reavalia o status — então ninguém entra/sai durante ou após o sorteio.
+ * e depois reavalia o status. Assim ninguém entra/sai durante ou após o sorteio.
  */
 async function lockOpenDraw(tx: Tx, drawId: string) {
   const locked = await tx.draw.updateMany({ where: { id: drawId, status: "OPEN" }, data: { updatedAt: new Date() } });
@@ -217,7 +217,7 @@ export type RunDrawOptions = {
  *  2. lê os participantes já com a trava ativa (ninguém entra/sai no meio);
  *  3. gera as atribuições (Fisher-Yates + crypto, sem autoindicação) e valida;
  *  4. grava 1 resultado por participante, com o destinatário cifrado.
- * Qualquer erro desfaz tudo — e o banco recusa COMMIT de sorteio incompleto (trigger).
+ * Qualquer erro desfaz tudo, e o banco recusa COMMIT de sorteio incompleto (trigger).
  */
 export async function runDraw(actor: Actor, drawId: unknown, options: RunDrawOptions = {}) {
   assertOrganizer(actor);
@@ -300,7 +300,7 @@ export async function notifyDrawCompleted(params: {
 
 // ───────────────────────────── Resultado individual ─────────────────────────────
 
-/** Sorteios de que a pessoa participa — sem nenhum dado de resultado. */
+/** Sorteios de que a pessoa participa, sem nenhum dado de resultado. */
 export async function listMyParticipations(actor: Actor) {
   const rows = await prisma.drawParticipant.findMany({
     where: { userId: actor.id },
@@ -316,7 +316,7 @@ export async function listMyParticipations(actor: Actor) {
 }
 
 /**
- * Único ponto do sistema que revela um destinatário — e só o do próprio usuário autenticado.
+ * Único ponto do sistema que revela um destinatário, e só o do próprio usuário autenticado.
  * A busca parte de (drawId, actor.id): não existe parâmetro que permita pedir o resultado de outra pessoa.
  */
 export async function getMyResult(actor: Actor, drawId: unknown) {

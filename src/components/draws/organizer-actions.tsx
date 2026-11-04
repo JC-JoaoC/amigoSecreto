@@ -53,7 +53,7 @@ export function OrganizerActions({
         description={
           <>
             O sorteio será entre os <strong className="font-medium text-ink">{participantCount} participantes</strong>. Depois disso
-            ninguém entra ou sai, e não dá para refazer. Cada pessoa verá só quem tirou — você também não verá os pares.
+            ninguém entra ou sai, e não dá para refazer. Cada pessoa verá só quem tirou, e você também não verá os pares.
           </>
         }
         confirmLabel="Sim, sortear"
@@ -75,7 +75,7 @@ export function OrganizerActions({
         description={
           open
             ? "O sorteio e a lista de participantes serão apagados. As contas e listas de presentes continuam."
-            : "O sorteio já foi realizado. Excluir apaga os resultados e as mensagens — ninguém mais verá quem tirou. Faça isso depois da troca de presentes."
+            : "O sorteio já foi realizado. Excluir apaga os resultados e as mensagens, e ninguém mais verá quem tirou. Faça isso depois da troca de presentes."
         }
         confirmLabel="Excluir definitivamente"
         loading={pending}

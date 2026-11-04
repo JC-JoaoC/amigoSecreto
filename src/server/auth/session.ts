@@ -4,7 +4,7 @@ import { prisma } from "../db";
 
 /**
  * Sessões opacas guardadas no banco. O cookie carrega um token aleatório;
- * o banco guarda só o SHA-256 dele — um vazamento do banco não permite sequestrar sessões.
+ * o banco guarda só o SHA-256 dele, então um vazamento do banco não permite sequestrar sessões.
  */
 export const SESSION_COOKIE = "laco_session";
 export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 dias

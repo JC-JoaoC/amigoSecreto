@@ -109,7 +109,7 @@ p {
 dialog { overscroll-behavior: contain; }
 dialog::backdrop { background: rgb(15 42 31 / 0.45); }
 
-/* Papelzinho do sorteio — o elemento de assinatura da interface. */
+/* Papelzinho do sorteio (resultado revelado). */
 .slip {
   background: var(--color-paper);
   border: 1px solid var(--color-paper-edge);

@@ -53,7 +53,7 @@ export function loginCodeEmail(params: { to: string; name: string; code: string;
      <div style="text-align:center;margin:0 0 20px">
        <span style="display:inline-block;background:#f1f7f3;border:2px dashed #2a7a57;border-radius:14px;padding:14px 22px;font-size:32px;letter-spacing:8px;font-weight:bold;color:#0f2a1f;font-family:'Courier New',monospace">${escapeHtml(spaced)}</span>
      </div>
-     <p style="margin:0;font-size:13px;color:#6b7a72">Não compartilhe este código com ninguém — nem com quem diz ser do ${escapeHtml(BRAND.name)}.</p>`,
+     <p style="margin:0;font-size:13px;color:#6b7a72">Não compartilhe este código com ninguém, nem com quem disser ser do ${escapeHtml(BRAND.name)}.</p>`,
   );
   return { to, subject, text, html, meta: { kind: "login-code", code } };
 }
@@ -75,7 +75,7 @@ export function drawCompletedEmail(params: { to: string; name: string; drawName:
     `<p style="margin:0 0 12px;font-size:16px">Olá, <strong>${escapeHtml(firstName(name))}</strong>!</p>
      <p style="margin:0 0 20px;font-size:15px;line-height:1.5">O sorteio <strong>${escapeHtml(drawName)}</strong> acabou de acontecer. Seu amigo secreto já está esperando por você.</p>
      <p style="text-align:center;margin:0 0 20px"><a href="${escapeHtml(url)}" style="display:inline-block;background:#b8232f;color:#ffffff;text-decoration:none;font-weight:bold;padding:14px 26px;border-radius:999px">Descobrir quem eu tirei</a></p>
-     <p style="margin:0;font-size:13px;color:#6b7a72">Por segurança, o nome não vai neste e-mail — só aparece depois que você entra.</p>`,
+     <p style="margin:0;font-size:13px;color:#6b7a72">Por segurança, o nome não vai neste e-mail. Ele só aparece depois que você entra.</p>`,
   );
   return { to, subject, text, html, meta: { kind: "draw-completed", drawId } };
 }

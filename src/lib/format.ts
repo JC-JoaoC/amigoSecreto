@@ -23,7 +23,7 @@ export function toDateInput(date: Date | string | null | undefined): string {
   return new Date(date).toISOString().slice(0, 10);
 }
 
-/** "20 de dez." — datas curtas para espaços apertados. */
+/** "20 de dez.": datas curtas para espaços apertados. */
 export function formatDayShort(date: Date | string | null | undefined): string | null {
   if (!date) return null;
   return new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(date));

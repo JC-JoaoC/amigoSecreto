@@ -49,7 +49,7 @@ export function Conversations({ drawId, withReceiver, withSecretFriend }: { draw
     return () => clearInterval(t);
   }, [router]);
 
-  // Abrir a aba marca as mensagens recebidas como lidas — uma única vez por conversa/estado
+  // Abrir a aba marca as mensagens recebidas como lidas, uma única vez por conversa/estado
   // (o modo estrito do React roda efeitos duas vezes em desenvolvimento).
   const unreadHere = current?.unread ?? 0;
   const markedRef = useRef<string | null>(null);

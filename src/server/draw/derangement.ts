@@ -1,7 +1,7 @@
 import { randomInt } from "node:crypto";
 
 /**
- * Algoritmo do sorteio (puro, sem banco — fácil de testar).
+ * Algoritmo do sorteio (puro, sem banco, fácil de testar).
  *
  * 1. Fisher-Yates com crypto.randomInt (aleatoriedade criptográfica) gera uma permutação uniforme.
  * 2. Rejeitamos permutações em que alguém tira a si mesmo e embaralhamos de novo.
@@ -33,7 +33,7 @@ export function fisherYatesShuffle<T>(items: readonly T[], rand: RandomInt = sec
 function sattoloCycle<T>(items: readonly T[], rand: RandomInt): T[] {
   const result = [...items];
   for (let i = result.length - 1; i > 0; i--) {
-    const j = rand(i); // j < i — diferença essencial em relação ao Fisher-Yates
+    const j = rand(i); // j < i: diferença essencial em relação ao Fisher-Yates
     [result[i], result[j]] = [result[j], result[i]];
   }
   return result;

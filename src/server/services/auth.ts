@@ -21,7 +21,7 @@ function hashCode(userId: string, code: string): string {
 
 /**
  * Cadastro: cria a conta (ainda não verificada). A conta só passa a valer
- * — e só aparece na lista pública — depois que a pessoa confirma o código do e-mail.
+ * (e só aparece na lista pública) depois que a pessoa confirma o código do e-mail.
  * Uma conta não verificada pode ser "reivindicada" de novo (evita alguém travar o e-mail alheio).
  */
 export async function registerUser(input: { name: unknown; email: unknown }, ip: string) {
