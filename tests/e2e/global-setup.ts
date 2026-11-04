@@ -14,7 +14,7 @@ export default async function globalSetup() {
 
   const pool = new Pool({ connectionString: url });
   await pool.query(
-    'TRUNCATE TABLE "draw_messages", "draw_results", "draw_participants", "draws", "gifts", "user_avatars", "sessions", "auth_tokens", "rate_limits", "users" RESTART IDENTITY CASCADE',
+    'TRUNCATE TABLE "draw_messages", "draw_results", "draw_participants", "draws", "gifts", "gift_images", "user_avatars", "sessions", "auth_tokens", "rate_limits", "users" RESTART IDENTITY CASCADE',
   );
   await pool.query(
     `INSERT INTO users (id, name, search_name, email, role, password_hash, email_verified_at, created_at, updated_at)

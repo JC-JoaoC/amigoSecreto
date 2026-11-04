@@ -40,6 +40,8 @@ export default defineConfig({
       MAIL_TRANSPORT: "console",
       MAIL_OUTBOX_DIR: E2E_OUTBOX,
       ORGANIZER_EMAILS: E2E_ORGANIZER_EMAIL,
+      // Sem acessar lojas de verdade nos testes (a busca é testada com uma internet de mentira).
+      PRODUCT_IMAGE_FETCH: "off",
     },
   },
 });

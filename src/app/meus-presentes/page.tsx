@@ -29,7 +29,7 @@ export default async function MyGiftsPage({ searchParams }: { searchParams: Prom
         title="Meus presentes"
         description="O que você gostaria de ganhar. Sua lista aparece para todos os participantes, inclusive para quem te tirar."
       />
-      <MyGifts gifts={gifts.map((g) => ({ id: g.id, title: g.title, url: g.url, description: g.description }))} />
+      <MyGifts gifts={gifts.map((g) => ({ id: g.id, title: g.title, url: g.url, description: g.description, imageUrl: g.imageUrl }))} />
     </Container>
   );
 }

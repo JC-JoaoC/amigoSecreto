@@ -6,25 +6,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
-
-/** Recorta o centro da imagem em quadrado e reduz no próprio navegador (upload leve, sem metadados). */
-async function squareResize(file: File, size: number): Promise<Blob> {
-  const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
-  const side = Math.min(bitmap.width, bitmap.height);
-  const out = Math.min(size, side);
-  const canvas = document.createElement("canvas");
-  canvas.width = out;
-  canvas.height = out;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("canvas indisponível");
-  ctx.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, out, out);
-  bitmap.close();
-  const toBlob = (type: string) => new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, 0.85));
-  let blob = await toBlob("image/webp");
-  if (!blob || blob.type !== "image/webp") blob = await toBlob("image/jpeg"); // navegadores sem WebP
-  if (!blob) throw new Error("não foi possível gerar a imagem");
-  return blob;
-}
+import { resizeImage } from "@/lib/client-image";
 
 /** Foto de perfil: escolher, pré-visualizar, salvar, trocar ou remover. */
 export function AvatarForm({ name, seed, avatarUrl }: { name: string; seed: string; avatarUrl: string | null }) {
@@ -54,7 +36,7 @@ export function AvatarForm({ name, seed, avatarUrl }: { name: string; seed: stri
       return;
     }
     try {
-      const blob = await squareResize(file, 512);
+      const blob = await resizeImage(file, 512, true);
       setPreview({ url: URL.createObjectURL(blob), blob });
     } catch {
       setError("Não conseguimos abrir essa imagem. Tente outra foto.");

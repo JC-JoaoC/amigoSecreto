@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Gift as GiftIcon } from "lucide-react";
 import { displayHost } from "@/lib/text";
 
-export type GiftView = { id: string; title: string; url: string; description: string | null };
+export type GiftView = { id: string; title: string; url: string; description: string | null; imageUrl?: string | null };
 
 /** Lista de presentes: um painel, uma linha por presente, ações em coluna fixa. */
 export function GiftList({ children }: { children: ReactNode }) {
@@ -13,11 +13,21 @@ export function GiftList({ children }: { children: ReactNode }) {
 export function GiftCard({ gift, actions }: { gift: GiftView; actions?: ReactNode }) {
   return (
     <li className="flex animate-rise flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:gap-6 sm:px-5">
-      <div className="min-w-0 flex-1">
-        <h3 className="break-words text-base font-medium text-ink">{gift.title}</h3>
-        {gift.description && (
-          <p className="mt-0.5 whitespace-pre-line break-words text-[15px] text-ink-2">{gift.description}</p>
-        )}
+      <div className="flex min-w-0 flex-1 items-center gap-4">
+        <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-control border border-line bg-white">
+          {gift.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- já servida reduzida (WebP) pelo nosso servidor
+            <img src={gift.imageUrl} alt="" width={64} height={64} loading="lazy" className="size-full object-contain p-1" />
+          ) : (
+            <GiftIcon className="size-5 text-ink-3" aria-hidden />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="break-words text-base font-medium text-ink">{gift.title}</h3>
+          {gift.description && (
+            <p className="mt-0.5 whitespace-pre-line break-words text-[15px] text-ink-2">{gift.description}</p>
+          )}
+        </div>
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <a

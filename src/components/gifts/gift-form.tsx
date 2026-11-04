@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/toast";
 import { suggestTitleFromUrl } from "@/lib/product-title";
 import { LIMITS, fieldErrorsOf, giftInputSchema } from "@/lib/validation";
 import type { GiftView } from "./gift-card";
+import { GiftPhotoField, useGiftPhoto } from "./gift-photo-field";
 
 type Errors = { title?: string; url?: string; description?: string; form?: string };
 
@@ -21,6 +22,7 @@ export function GiftForm({ gift, onDone, onCancel }: { gift?: GiftView; onDone: 
   const [autoTitle, setAutoTitle] = useState<string | null>(null);
   const [errors, setErrors] = useState<Errors>({});
   const [pending, startTransition] = useTransition();
+  const photo = useGiftPhoto(gift?.imageUrl);
 
   return (
     <form
@@ -46,7 +48,10 @@ export function GiftForm({ gift, onDone, onCancel }: { gift?: GiftView; onDone: 
             focusFirstError(formRef.current);
             return;
           }
-          toast.success(r.message ?? "Salvo!");
+          // A foto vai depois do presente: se ela falhar, o presente já está salvo.
+          const photoError = await photo.persist(r.data.id);
+          if (photoError) toast.error(`O presente foi salvo, mas a foto não: ${photoError}`);
+          else toast.success(r.message ?? "Salvo!");
           onDone();
         });
       }}
@@ -63,6 +68,7 @@ export function GiftForm({ gift, onDone, onCancel }: { gift?: GiftView; onDone: 
           const value = e.target.value;
           setUrl(value);
           setErrors((x) => ({ ...x, url: undefined }));
+          photo.onUrlChange(value);
           // Preenche o nome a partir do link, sem nunca apagar o que a pessoa digitou.
           const suggestion = suggestTitleFromUrl(value);
           if (suggestion && (title.trim() === "" || title === autoTitle)) {
@@ -91,6 +97,7 @@ export function GiftForm({ gift, onDone, onCancel }: { gift?: GiftView; onDone: 
         maxLength={LIMITS.giftTitleMax}
         required
       />
+      <GiftPhotoField {...photo} url={url} disabled={pending} />
       <TextareaField
         label="Descrição"
         optional

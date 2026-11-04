@@ -5,7 +5,7 @@ import { hashPassword } from "@/server/password";
 /** Limpa todas as tabelas (TRUNCATE não dispara os triggers de linha). */
 export async function resetDb() {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE "draw_messages", "draw_results", "draw_participants", "draws", "gifts", "user_avatars", "sessions", "auth_tokens", "rate_limits", "users" RESTART IDENTITY CASCADE',
+    'TRUNCATE TABLE "draw_messages", "draw_results", "draw_participants", "draws", "gifts", "gift_images", "user_avatars", "sessions", "auth_tokens", "rate_limits", "users" RESTART IDENTITY CASCADE',
   );
 }
 

@@ -139,6 +139,7 @@ tests/ (unit, integration, e2e)
 | `sessions` | Sessões: id = SHA-256 do token do cookie, expiração deslizante (30 dias). |
 | `auth_tokens` | Links de uso único enviados por e-mail (nova senha: 30 min; confirmação de e-mail: 48 h), guardados só como SHA-256. |
 | `user_avatars` | Foto de perfil opcional, já reprocessada no servidor (WebP 256×256, sem metadados como GPS). Servida em `/api/avatar/<id>?v=<versão>`. |
+| `gift_images` | Foto do produto opcional (WebP até 480×480, sem metadados). Buscada na página da loja ou enviada pela pessoa. Servida em `/api/gift-image/<id>?v=<versão>`. |
 | `rate_limits` | Contadores de janela fixa (chaves com HMAC de e-mail/IP). |
 | `draws` | Sorteio (nome, valor sugerido, data, status `OPEN`/`COMPLETED`). Base para múltiplos grupos. |
 | `draw_participants` | Quem participa — único por (sorteio, usuário). |
@@ -173,6 +174,7 @@ Sem cara de template: superfícies brancas e cinza-claro, tinta verde quase pret
 ### Segurança
 
 - Foto de perfil: toda imagem é decodificada e regravada pelo servidor (`sharp`), o que descarta arquivos que não são imagem e apaga metadados (EXIF/GPS). Servida com `Content-Security-Policy: sandbox`.
+- Foto do produto buscada na loja (`src/server/product-image.ts`): só lojas de uma lista fechada (`src/lib/stores.ts`), só HTTPS, redirecionamentos revalidados um a um, endereço recusado na hora da conexão se for de rede interna (protege contra SSRF e DNS rebinding), limite de tempo e tamanho, e limite de buscas por usuário. Identifica-se honestamente (`LacoLinkPreview`); lojas que bloqueiam robôs (Mercado Livre, Magalu, Amazon) caem no envio manual. `PRODUCT_IMAGE_FETCH=off` desliga a busca.
 - Senha guardada só como hash **scrypt** com sal; login com mensagem genérica ("E-mail ou senha incorretos.") e o mesmo tempo de resposta exista ou não a conta.
 - Rate limit por IP e por e-mail (login, cadastro, pedidos de nova senha). Trocar ou redefinir a senha encerra as outras sessões.
 - Cookie `HttpOnly`, `Secure` (produção), `SameSite=Lax`; token opaco de 256 bits, só o hash no banco.
@@ -187,5 +189,5 @@ Sem cara de template: superfícies brancas e cinza-claro, tinta verde quase pret
 - **O cadastro revela se o e-mail já tem conta** ("Este e-mail já tem cadastro"). O login e o "Esqueci minha senha" não revelam.
 - Organizador não pode **refazer** um sorteio realizado (decisão de segurança). Para corrigir, exclua o sorteio e crie outro.
 - Pessoa em sorteio já realizado só exclui a conta depois que o organizador excluir o sorteio.
-- Sem upload de foto de perfil (avatar com iniciais).
+- A foto automática só funciona em lojas que deixam a página ser lida sem navegador (ex.: Americanas, KaBuM). Nas outras, a pessoa envia a foto.
 - `APP_SECRET` não pode ser rotacionado sem perder os resultados já cifrados.

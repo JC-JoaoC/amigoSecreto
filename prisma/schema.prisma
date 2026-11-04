@@ -64,10 +64,13 @@ model Gift {
   title       String   @db.VarChar(120)
   url         String   @db.VarChar(2048)
   description String?  @db.VarChar(500)
+  /// Quando a foto do produto mudou (versiona a URL da foto; nulo = sem foto).
+  imageUpdatedAt DateTime? @map("image_updated_at")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  image GiftImage?
 
   @@index([userId, createdAt])
   @@map("gifts")
@@ -200,4 +203,17 @@ model UserAvatar {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_avatars")
+}
+
+/// Foto do produto (buscada na loja ou enviada pela pessoa), sempre reprocessada no servidor:
+/// WebP de até 480px, sem metadados. Copiada para cá para não depender da loja.
+model GiftImage {
+  giftId    String   @id @map("gift_id")
+  data      Bytes
+  mimeType  String   @map("mime_type") @db.VarChar(32)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  gift Gift @relation(fields: [giftId], references: [id], onDelete: Cascade)
+
+  @@map("gift_images")
 }

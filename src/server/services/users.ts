@@ -5,6 +5,7 @@ import { avatarUrl } from "@/lib/avatar";
 import { prisma } from "../db";
 import { AppError } from "../errors";
 import { parseOrThrow } from "../validate";
+import { withImageUrl } from "./gifts";
 
 export const PARTICIPANTS_PAGE_SIZE = 60;
 
@@ -71,13 +72,13 @@ export async function getParticipantWithGifts(userId: string) {
       avatarUpdatedAt: true,
       gifts: {
         orderBy: { createdAt: "asc" },
-        select: { id: true, title: true, url: true, description: true },
+        select: { id: true, title: true, url: true, description: true, imageUpdatedAt: true },
       },
     },
   });
   if (!user) return null;
-  const { avatarUpdatedAt, ...rest } = user;
-  return { ...rest, avatarUrl: avatarUrl(user.id, avatarUpdatedAt) };
+  const { avatarUpdatedAt, gifts, ...rest } = user;
+  return { ...rest, gifts: gifts.map(withImageUrl), avatarUrl: avatarUrl(user.id, avatarUpdatedAt) };
 }
 
 export async function getAccount(userId: string) {
