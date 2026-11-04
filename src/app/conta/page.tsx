@@ -41,7 +41,7 @@ export default async function AccountPage() {
           <dl className="space-y-2 text-[15px]">
             <div className="flex flex-wrap justify-between gap-x-4">
               <dt className="text-ink-2">E-mail</dt>
-              <dd className="break-all text-ink">{account.email}</dd>
+              <dd className="text-ink [overflow-wrap:anywhere]">{account.email}</dd>
             </div>
             <div className="flex flex-wrap justify-between gap-x-4">
               <dt className="text-ink-2">Permissão</dt>

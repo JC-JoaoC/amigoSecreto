@@ -63,10 +63,14 @@ export function CodeStep({ email, next, onChangeEmail }: { email: string; next?:
 
   return (
     <div className="animate-rise">
-      <p className="mb-6 text-base text-ink">
-        Enviamos um código de 6 dígitos para <strong className="break-all font-medium">{email}</strong>. Ele vale por 10 minutos.
-        <span className="mt-1 block text-[15px] text-ink-2">Não chegou? Confira a caixa de spam.</span>
-      </p>
+      <div className="mb-6 text-base text-ink">
+        {/* O e-mail desce inteiro para a linha seguinte; só quebra por dentro se não couber sozinho. */}
+        <p>
+          Enviamos um código de 6 dígitos para{" "}
+          <strong className="font-medium [overflow-wrap:anywhere]">{email}</strong>.
+        </p>
+        <p className="mt-1 text-[15px] text-ink-2">Ele vale por 10 minutos. Não chegou? Confira a caixa de spam.</p>
+      </div>
 
       <form
         noValidate

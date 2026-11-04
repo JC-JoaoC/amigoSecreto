@@ -68,7 +68,7 @@ export function LoginForm({ next, initialEmail = "" }: { next?: string; initialE
       {notFound && (
         <div aria-live="polite" className="animate-rise rounded-panel bg-mist p-4">
           <p className="text-[15px] text-ink">
-            Não encontramos uma conta com <strong className="break-all font-medium">{notFound}</strong>.
+            Não encontramos uma conta com <strong className="font-medium [overflow-wrap:anywhere]">{notFound}</strong>.
           </p>
           <ButtonLink
             href={`/cadastro?email=${encodeURIComponent(notFound)}${next ? `&next=${encodeURIComponent(next)}` : ""}`}
