@@ -19,7 +19,7 @@ const sections = [
   },
   {
     title: "Como protegemos",
-    body: "Sua senha é guardada só como hash (scrypt), nunca em texto. Tokens de sessão e links enviados por e-mail também ficam só como hash. O resultado de cada sorteio e o texto das mensagens anônimas são cifrados (AES-256-GCM): só a própria pessoa vê quem tirou, e as mensagens não registram quem as escreveu. Nem quem organiza vê os pares.",
+    body: "Sua senha é guardada só como hash (scrypt), nunca em texto. Tokens de sessão e links enviados por e-mail também ficam só como hash. O resultado de cada sorteio e o texto das mensagens anônimas são cifrados (AES-256-GCM): entre os participantes, só a própria pessoa vê quem tirou, e as mensagens não registram quem as escreveu. O organizador do sorteio consegue consultar os pares e o texto das mensagens (por exemplo, para resolver um problema), e cada consulta fica registrada.",
   },
   {
     title: "Cookies",

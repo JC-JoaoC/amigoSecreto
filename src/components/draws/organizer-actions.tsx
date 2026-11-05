@@ -53,7 +53,8 @@ export function OrganizerActions({
         description={
           <>
             O sorteio será entre os <strong className="font-medium text-ink">{participantCount} participantes</strong>. Depois disso
-            ninguém entra ou sai, e não dá para refazer. Cada pessoa verá só quem tirou, e você também não verá os pares.
+            ninguém entra ou sai, e não dá para refazer. Cada pessoa verá só quem tirou. Como organizador, você poderá consultar os
+            pares e as mensagens em “Ver pares e mensagens”.
           </>
         }
         confirmLabel="Sim, sortear"

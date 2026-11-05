@@ -8,7 +8,8 @@ export function Footer() {
         <div className="max-w-sm">
           <Logo />
           <p className="mt-3 text-[15px] text-ink-2">
-            Cada resultado é cifrado no servidor. Só quem tirou consegue ver o nome. Nem quem organiza tem acesso.
+            Cada resultado é cifrado no servidor. Entre os participantes, só quem tirou vê o nome. O organizador pode consultar os
+            pares e as mensagens.
           </p>
         </div>
         <nav aria-label="Rodapé" className="flex flex-wrap gap-x-6 gap-y-2 text-[15px]">

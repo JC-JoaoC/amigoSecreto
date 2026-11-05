@@ -16,8 +16,9 @@ import type { Actor } from "./draws";
  *  - "secret-friend": com quem a tirou (o amigo secreto dela, que fica anônimo).
  *
  * A conversa pertence ao resultado de quem presenteia. A conversa "secret-friend" é
- * encontrada pelo HMAC do destinatário: o servidor nunca precisa (nem devolve) a identidade
- * de quem presenteia. As mensagens não guardam id de usuário: o autor sai da direção.
+ * encontrada pelo HMAC do destinatário: para os participantes, o servidor nunca devolve a
+ * identidade de quem presenteia. As mensagens não guardam id de usuário: o autor sai da direção.
+ * Exceção: a área do organizador (services/admin.ts) lê pares e mensagens.
  */
 
 export const MESSAGE_MAX_LENGTH = 1000;

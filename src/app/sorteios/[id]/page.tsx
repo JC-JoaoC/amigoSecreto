@@ -108,8 +108,14 @@ export default async function DrawPage({ params }: { params: Promise<{ id: strin
                 </dl>
               ) : (
                 <p className="mb-4 mt-1 text-[15px] text-ink-2">
-                  Adicione quem vai participar e sorteie quando todos estiverem dentro. Nem você verá os pares.
+                  Adicione quem vai participar e sorteie quando todos estiverem dentro. Depois, os pares ficam visíveis só para
+                  organizadores.
                 </p>
+              )}
+              {draw.status === "COMPLETED" && (
+                <ButtonLink href={`/sorteios/${draw.id}/admin`} variant="outline" className="mb-2 w-full">
+                  Ver pares e mensagens
+                </ButtonLink>
               )}
               <OrganizerActions
                 draw={{ id: draw.id, name: draw.name, description: draw.description, budget: draw.budget, eventDate: draw.eventDate, status: draw.status }}
