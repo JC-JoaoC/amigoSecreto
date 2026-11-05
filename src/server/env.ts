@@ -45,13 +45,21 @@ export function env(): Env {
   return cached;
 }
 
+/**
+ * Aceita vírgula, ponto e vírgula ou espaço como separador e ignora aspas:
+ * painéis como o Coolify às vezes gravam o valor com as aspas literais ("a@b.com").
+ */
 export function organizerEmails(): Set<string> {
   return new Set(
     env()
-      .ORGANIZER_EMAILS.split(",")
-      .map((e) => e.trim().toLowerCase())
+      .ORGANIZER_EMAILS.split(/[,;\s]+/)
+      .map((e) => e.replace(/["'`]/g, "").trim().toLowerCase())
       .filter(Boolean),
   );
+}
+
+export function isOrganizerEmail(email: string): boolean {
+  return organizerEmails().has(email.trim().toLowerCase());
 }
 
 export const isProduction = () => env().NODE_ENV === "production";

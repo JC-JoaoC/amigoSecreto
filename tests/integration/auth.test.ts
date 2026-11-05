@@ -188,6 +188,19 @@ describe("confirmação de e-mail e organizador", () => {
     expect(u.emailVerifiedAt).not.toBeNull();
   });
 
+  it("sessão já aberta vira organizadora sem sair e entrar (e-mail confirmado + na lista)", async () => {
+    const u = await createUser({ email: "organizadora@teste.dev", verified: true });
+    const { token } = await createSession(u.id);
+    expect((await validateSessionToken(token))?.user.role).toBe("ORGANIZER");
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: u.id } })).role).toBe("ORGANIZER");
+  });
+
+  it("sessão aberta com e-mail da lista mas sem confirmação continua participante", async () => {
+    const u = await createUser({ email: "organizadora@teste.dev", verified: false });
+    const { token } = await createSession(u.id);
+    expect((await validateSessionToken(token))?.user.role).toBe("USER");
+  });
+
   it("link de confirmação não serve para trocar senha (e vice-versa) e só vale uma vez", async () => {
     await registerUser({ name: "Kika Reis", email: "kika@teste.dev", password: PW }, freshIp());
     const verify = lastToken("kika@teste.dev", "verify-email");

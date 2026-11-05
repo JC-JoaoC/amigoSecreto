@@ -1,6 +1,7 @@
 import "server-only";
 import { generateSessionToken, sha256 } from "../crypto";
 import { prisma } from "../db";
+import { isOrganizerEmail } from "../env";
 
 /**
  * Sessões opacas guardadas no banco. O cookie carrega um token aleatório;
@@ -34,7 +35,7 @@ export async function validateSessionToken(
     where: { id },
     select: {
       expiresAt: true,
-      user: { select: { id: true, name: true, email: true, role: true, avatarUpdatedAt: true } },
+      user: { select: { id: true, name: true, email: true, role: true, emailVerifiedAt: true, avatarUpdatedAt: true } },
     },
   });
   if (!session) return null;
@@ -51,7 +52,16 @@ export async function validateSessionToken(
     await prisma.session.update({ where: { id }, data: { expiresAt } });
   }
 
-  const { id: userId, name, email, role, avatarUpdatedAt } = session.user;
+  const { id: userId, name, email, emailVerifiedAt, avatarUpdatedAt } = session.user;
+  let role = session.user.role;
+
+  // ORGANIZER_EMAILS vale também para quem já estava logado quando a lista mudou,
+  // sem precisar sair e entrar. Continua exigindo e-mail confirmado.
+  if (role !== "ORGANIZER" && emailVerifiedAt && isOrganizerEmail(email)) {
+    await prisma.user.updateMany({ where: { id: userId, role: "USER" }, data: { role: "ORGANIZER" } });
+    role = "ORGANIZER";
+  }
+
   return { user: { id: userId, name, email, role, avatarUpdatedAt }, expiresAt };
 }
 

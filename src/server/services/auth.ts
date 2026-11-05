@@ -10,7 +10,7 @@ import { toSearchText } from "@/lib/text";
 import { createSession } from "../auth/session";
 import { generateSessionToken, sha256 } from "../crypto";
 import { prisma } from "../db";
-import { env, organizerEmails } from "../env";
+import { env, isOrganizerEmail } from "../env";
 import { AppError } from "../errors";
 import { sendMail } from "../mail/mailer";
 import { passwordResetEmail, verifyEmailEmail } from "../mail/templates";
@@ -61,7 +61,7 @@ async function consumeToken(token: string, purpose: "RESET_PASSWORD" | "VERIFY_E
 
 /** Organizador só com e-mail confirmado: prova de que a pessoa é dona do endereço da lista. */
 async function promoteIfOrganizer(user: { id: string; email: string; role: string; emailVerifiedAt: Date | null }) {
-  if (user.role !== "ORGANIZER" && user.emailVerifiedAt && organizerEmails().has(user.email)) {
+  if (user.role !== "ORGANIZER" && user.emailVerifiedAt && isOrganizerEmail(user.email)) {
     await prisma.user.update({ where: { id: user.id }, data: { role: "ORGANIZER" } });
   }
 }
