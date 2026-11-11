@@ -15,6 +15,7 @@ type NavUser = { id: string; name: string; avatarUrl: string | null } | null;
 const privateLinks = [
   { href: "/meus-presentes", label: "Meus presentes" },
   { href: "/sorteios", label: "Sorteios" },
+  { href: "/saco", label: "Sorteio do saco" },
   { href: "/meu-resultado", label: "Meu amigo secreto" },
   { href: "/conta", label: "Conta" },
 ];
@@ -57,7 +58,7 @@ export function HeaderNav({ user, unread = 0 }: { user: NavUser; unread?: number
             href={l.href}
             aria-current={isActive(pathname, l.href) ? "page" : undefined}
             className={cn(
-              "inline-flex h-9 items-center rounded-[var(--radius-control)] px-3 text-[15px] transition-colors",
+              "inline-flex h-9 items-center whitespace-nowrap rounded-[var(--radius-control)] px-2 text-[15px] transition-colors xl:px-3",
               isActive(pathname, l.href) ? "bg-mist-2 font-medium text-ink" : "text-ink-2 hover:bg-mist hover:text-ink",
             )}
           >
@@ -72,7 +73,8 @@ export function HeaderNav({ user, unread = 0 }: { user: NavUser; unread?: number
           <>
             <span className="flex items-center gap-2 text-[15px] text-ink">
               <Avatar name={user.name} seed={user.id} src={user.avatarUrl} size="sm" />
-              {firstName(user.name)}
+              {/* Em telas médias, só o avatar: o menu precisa caber numa linha. */}
+              <span className="hidden xl:inline">{firstName(user.name)}</span>
             </span>
             <form action={logoutAction}>
               <button

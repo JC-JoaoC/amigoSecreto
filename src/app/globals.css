@@ -42,6 +42,20 @@
   --animate-drop: drop 0.6s cubic-bezier(0.2, 0.9, 0.25, 1.15) both;
   --animate-unfold: unfold 0.55s cubic-bezier(0.25, 0.9, 0.3, 1) both;
   --animate-tag: tag-in 0.45s cubic-bezier(0.2, 1.3, 0.4, 1) both;
+  --animate-shake: shake 0.6s ease-in-out infinite;
+  --animate-pop: pop 0.5s cubic-bezier(0.2, 1.3, 0.4, 1) both;
+
+  @keyframes shake {
+    0%, 100% { transform: rotate(0deg); }
+    20% { transform: rotate(-7deg); }
+    40% { transform: rotate(6deg); }
+    60% { transform: rotate(-4deg); }
+    80% { transform: rotate(3deg); }
+  }
+  @keyframes pop {
+    from { opacity: 0; transform: translateY(40px) scale(0.7) rotate(-4deg); }
+    to { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+  }
 
   @keyframes rise {
     from { opacity: 0; transform: translateY(16px); }
@@ -121,6 +135,111 @@ dialog::backdrop { background: rgb(15 42 31 / 0.45); }
   border-bottom-width: 3px;
   border-radius: 3px;
   background-image: linear-gradient(to bottom, transparent calc(50% - 0.5px), rgb(120 100 60 / 0.16) 50%, transparent calc(50% + 0.5px));
+}
+
+/* ───────── Sorteio do saco: o nome sai do saco e abre ─────────
+   Linha do tempo (nome comum): saco chacoalha 0–0,9s → papel voa 0,8–1,5s → papel abre 1,45s
+   → nome aparece 1,8s → botões 2,1s. No vencedor, tudo começa mais tarde (--bag-delay). */
+.bag-reveal { --bag-delay: 0s; }
+.bag-reveal[data-kind="winner"] { --bag-delay: 0.7s; }
+.bag-reveal::backdrop {
+  background: radial-gradient(circle at 50% 40%, #276547, #0f2a1f 75%);
+  animation: bag-fade 0.25s ease-out both;
+}
+
+.bag-reveal-sack {
+  transform-origin: 50% 100%;
+  animation:
+    bag-wobble calc(0.9s + var(--bag-delay)) ease-in-out both,
+    bag-squash 0.35s calc(0.8s + var(--bag-delay)) ease-out forwards;
+}
+.bag-reveal-paper {
+  animation:
+    bag-paper-fly 0.7s calc(0.8s + var(--bag-delay)) cubic-bezier(0.2, 0.8, 0.3, 1.1) both,
+    bag-paper-vanish 0.18s calc(1.45s + var(--bag-delay)) ease-in forwards;
+}
+.bag-reveal-card {
+  transform-origin: 50% 100%;
+  animation: bag-card-open 0.6s calc(1.45s + var(--bag-delay)) cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.bag-reveal-name { animation: bag-name-in 0.55s calc(1.8s + var(--bag-delay)) ease-out both; }
+.bag-reveal-after { animation: rise 0.42s calc(2.1s + var(--bag-delay)) cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+/* Raios dourados que estouram quando o papel abre. */
+.bag-reveal-ray {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 34px;
+  margin: -17px 0 0 -2px;
+  border-radius: 2px;
+  background: var(--color-gold-300);
+  opacity: 0;
+  animation: bag-ray 0.7s calc(1.45s + var(--bag-delay)) ease-out both;
+}
+/* Confete do vencedor: cada pedaço recebe --x, --y, --r, --d e a cor por style. */
+.bag-confetti {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: bag-confetti 1.6s calc(1.5s + var(--bag-delay) + var(--d, 0s)) cubic-bezier(0.15, 0.7, 0.4, 1) both;
+}
+
+@keyframes bag-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes bag-wobble {
+  0%, 100% { transform: rotate(0deg); }
+  12% { transform: rotate(-9deg) scale(1.03); }
+  26% { transform: rotate(8deg); }
+  40% { transform: rotate(-7deg) scale(1.02); }
+  54% { transform: rotate(6deg); }
+  68% { transform: rotate(-4deg); }
+  84% { transform: rotate(2deg); }
+}
+@keyframes bag-squash {
+  0% { transform: scale(1, 1); }
+  35% { transform: scale(1.1, 0.88); }
+  70% { transform: scale(0.95, 1.06); }
+  100% { transform: scale(1, 1); }
+}
+@keyframes bag-paper-fly {
+  0% { opacity: 0; transform: translate(-50%, 0) scale(0.35) rotate(-14deg); }
+  18% { opacity: 1; }
+  75% { transform: translate(-50%, -178px) scale(1.12) rotate(9deg); }
+  100% { opacity: 1; transform: translate(-50%, -160px) scale(1) rotate(0deg); }
+}
+@keyframes bag-paper-vanish {
+  from { opacity: 1; transform: translate(-50%, -160px) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -160px) scale(1.7); }
+}
+@keyframes bag-card-open {
+  0% { opacity: 0; transform: perspective(800px) rotateX(-95deg) scale(0.55); }
+  60% { opacity: 1; transform: perspective(800px) rotateX(10deg) scale(1.04); }
+  100% { opacity: 1; transform: perspective(800px) rotateX(0deg) scale(1); }
+}
+@keyframes bag-name-in {
+  from { opacity: 0; transform: scale(0.85); filter: blur(6px); }
+  to { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+@keyframes bag-ray {
+  0% { opacity: 0; transform: rotate(var(--a)) translateY(0) scaleY(0.3); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--a)) translateY(-220px) scaleY(1); }
+}
+@keyframes bag-confetti {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--x), var(--y)) rotate(var(--r)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Sem movimento: o nome aparece direto, sem esperar a coreografia. */
+  .bag-reveal, .bag-reveal *, .bag-reveal::backdrop { animation-delay: 0s !important; }
+  .bag-reveal-paper, .bag-reveal-ray, .bag-confetti { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

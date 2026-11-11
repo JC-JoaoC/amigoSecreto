@@ -154,6 +154,10 @@ export const drawInputSchema = z.object({
 });
 export type DrawInput = z.input<typeof drawInputSchema>;
 
+/** Sorteio do saco: só nome e recado. */
+export const bagDrawInputSchema = drawInputSchema.pick({ name: true, description: true });
+export type BagDrawInput = z.input<typeof bagDrawInputSchema>;
+
 export const idSchema = z.string().trim().min(1).max(64).regex(/^[a-z0-9]+$/i);
 
 /** Converte erros do zod em { campo: [mensagens] } para os formulários. */

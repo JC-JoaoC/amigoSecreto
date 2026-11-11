@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { Check, LoaderCircle, Search } from "lucide-react";
+import { addBagEntriesAction, searchAddableBagUsersAction } from "@/app/actions/bag-draws";
 import { addParticipantsAction, searchAddableUsersAction } from "@/app/actions/draws";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -11,8 +12,14 @@ import { cn } from "@/lib/cn";
 
 type U = { id: string; name: string; avatarUrl: string | null };
 
-/** Organizador escolhe pessoas cadastradas (e verificadas) para entrar no sorteio. */
-export function AddParticipants({ drawId }: { drawId: string }) {
+const ACTIONS = {
+  draw: { search: searchAddableUsersAction, add: addParticipantsAction, label: "Adicionar participantes" },
+  bag: { search: searchAddableBagUsersAction, add: addBagEntriesAction, label: "Colocar pessoas no saco" },
+} as const;
+
+/** Organizador escolhe pessoas cadastradas (e verificadas) para entrar no sorteio (amigo secreto ou saco). */
+export function AddParticipants({ drawId, kind = "draw" }: { drawId: string; kind?: keyof typeof ACTIONS }) {
+  const { search, add, label } = ACTIONS[kind];
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -27,7 +34,7 @@ export function AddParticipants({ drawId }: { drawId: string }) {
     const t = setTimeout(
       () =>
         startSearch(async () => {
-          const r = await searchAddableUsersAction(drawId, q);
+          const r = await search(drawId, q);
           if (r.ok) {
             setUsers(r.data);
             setLoadError(null);
@@ -36,7 +43,7 @@ export function AddParticipants({ drawId }: { drawId: string }) {
       q ? 250 : 0,
     );
     return () => clearTimeout(t);
-  }, [open, q, drawId]);
+  }, [open, q, drawId, search]);
 
   function close() {
     setOpen(false);
@@ -59,9 +66,9 @@ export function AddParticipants({ drawId }: { drawId: string }) {
   return (
     <>
       <Button variant="outline" onClick={() => setOpen(true)}>
-        Adicionar participantes
+        {label}
       </Button>
-      <Modal open={open} onClose={close} title="Adicionar participantes" description="Somente pessoas com conta confirmada aparecem aqui.">
+      <Modal open={open} onClose={close} title={label} description="Somente pessoas com conta confirmada aparecem aqui.">
         <div className="space-y-4">
           <div className="relative">
             <label htmlFor="busca-add" className="sr-only">Buscar pelo nome</label>
@@ -142,7 +149,7 @@ export function AddParticipants({ drawId }: { drawId: string }) {
               disabled={selected.size === 0}
               onClick={() =>
                 startSave(async () => {
-                  const r = await addParticipantsAction(drawId, [...selected]);
+                  const r = await add(drawId, [...selected]);
                   if (!r.ok) {
                     toast.error(r.error);
                     return;

@@ -5,7 +5,7 @@ import { type NextRequest, NextResponse } from "next/server";
  * A validação real (sessão no banco, expiração, permissões) acontece no servidor em cada página/ação.
  */
 const SESSION_COOKIE = "laco_session";
-const PRIVATE_PREFIXES = ["/meus-presentes", "/sorteios", "/meu-resultado", "/conta"];
+const PRIVATE_PREFIXES = ["/meus-presentes", "/sorteios", "/saco", "/meu-resultado", "/conta"];
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
@@ -20,5 +20,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/meus-presentes/:path*", "/sorteios/:path*", "/meu-resultado/:path*", "/conta/:path*"],
+  matcher: ["/meus-presentes/:path*", "/sorteios/:path*", "/saco/:path*", "/meu-resultado/:path*", "/conta/:path*"],
 };

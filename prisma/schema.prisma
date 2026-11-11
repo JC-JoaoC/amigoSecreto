@@ -25,6 +25,12 @@ enum DrawStatus {
   COMPLETED // sorteio realizado, imutável
 }
 
+enum BagDrawStatus {
+  OPEN // montando o saco: entra/sai gente, organizador define quem fica por último
+  RUNNING // já começou a tirar nomes: ninguém entra nem sai
+  COMPLETED // sobrou um nome no saco: é quem ganhou
+}
+
 enum TokenPurpose {
   RESET_PASSWORD // "esqueci minha senha"
   VERIFY_EMAIL // confirmação do e-mail (obrigatória só para virar organizador)
@@ -53,21 +59,24 @@ model User {
   avatar         UserAvatar?
   participations DrawParticipant[]
   createdDraws   Draw[]            @relation("DrawCreator")
+  bagEntries     BagEntry[]
+  createdBags    BagDraw[]         @relation("BagDrawCreator")
+  reservedBags   BagDraw[]         @relation("BagDrawLast")
 
   @@index([searchName])
   @@map("users")
 }
 
 model Gift {
-  id          String   @id @default(cuid())
-  userId      String   @map("user_id")
-  title       String   @db.VarChar(120)
-  url         String   @db.VarChar(2048)
-  description String?  @db.VarChar(500)
+  id             String    @id @default(cuid())
+  userId         String    @map("user_id")
+  title          String    @db.VarChar(120)
+  url            String    @db.VarChar(2048)
+  description    String?   @db.VarChar(500)
   /// Quando a foto do produto mudou (versiona a URL da foto; nulo = sem foto).
   imageUpdatedAt DateTime? @map("image_updated_at")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   image GiftImage?
@@ -78,10 +87,10 @@ model Gift {
 
 model Session {
   /// SHA-256 do token do cookie. O token em si nunca é gravado.
-  id         String   @id @db.VarChar(64)
-  userId     String   @map("user_id")
-  expiresAt  DateTime @map("expires_at")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id        String   @id @db.VarChar(64)
+  userId    String   @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -216,4 +225,47 @@ model GiftImage {
   gift Gift @relation(fields: [giftId], references: [id], onDelete: Cascade)
 
   @@map("gift_images")
+}
+
+/// Sorteio do saco: os nomes saem um a um; quem sobra por último no saco ganha.
+model BagDraw {
+  id          String        @id @default(cuid())
+  name        String        @db.VarChar(80)
+  description String?       @db.VarChar(500)
+  status      BagDrawStatus @default(OPEN)
+  /// Quem o organizador marcou para ficar por último (opcional; nulo = sai aleatório).
+  /// Só organizadores enxergam este campo.
+  lastUserId  String?       @map("last_user_id")
+  createdById String?       @map("created_by_id")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  startedAt   DateTime?     @map("started_at")
+  completedAt DateTime?     @map("completed_at")
+
+  createdBy User?      @relation("BagDrawCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  lastUser  User?      @relation("BagDrawLast", fields: [lastUserId], references: [id], onDelete: SetNull)
+  entries   BagEntry[]
+
+  @@index([status, createdAt])
+  @@map("bag_draws")
+}
+
+/// Um nome dentro do saco.
+model BagEntry {
+  id        String    @id @default(cuid())
+  bagDrawId String    @map("bag_draw_id")
+  userId    String    @map("user_id")
+  /// Ordem em que saiu do saco (1 = primeiro). Nulo = ainda está no saco.
+  /// O vencedor recebe a última posição quando o sorteio termina.
+  position  Int?
+  drawnAt   DateTime? @map("drawn_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  bagDraw BagDraw @relation(fields: [bagDrawId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([bagDrawId, userId])
+  @@unique([bagDrawId, position])
+  @@index([userId])
+  @@map("bag_entries")
 }
